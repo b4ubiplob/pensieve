@@ -1,6 +1,0 @@
-Bug=issue in software
-Task=new task in a backlog
-Proposal=proposal for project
-Enhancement=Enhancement to be done in software
-Epic=story
-Backlog=part of an epic

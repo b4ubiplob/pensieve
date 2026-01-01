@@ -1,5 +1,0 @@
-Trivial=Trivial issue can be ignored
-Minor=Minor issue needs to be fixed but not urgent
-Major=Major issue needs to be fixed quickly
-Critical=Critical issue needs to be fixed within 4 hours
-Blocker=Topmost priority needs to be solved before everything else
