@@ -14,10 +14,10 @@ public class User {
     @Column(name = "email", length = 256, nullable = false)
     private String email;
 
-    @Column(name = "username", length = 256, nullable = false)
+    @Column(name = "username", length = 256)
     private String username;
 
-    @Column(name = "password", length = 256, nullable = false)
+    @Column(name = "password", length = 256)
     private String password;
 
     @Lob
@@ -26,6 +26,15 @@ public class User {
 
     @Column(name = "name", length = 256, nullable = false)
     private String name;
+
+    @Column(name = "provider", length = 50)
+    private String provider = "LOCAL";
+
+    @Column(name = "provider_id", length = 256)
+    private String providerId;
+
+    @Column(name = "picture_url", length = 512)
+    private String pictureUrl;
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private Set<Project> projects;
@@ -97,6 +106,30 @@ public class User {
 
     public void setProjects(Set<Project> projects) {
         this.projects = projects;
+    }
+
+    public String getProvider() {
+        return provider;
+    }
+
+    public void setProvider(String provider) {
+        this.provider = provider;
+    }
+
+    public String getProviderId() {
+        return providerId;
+    }
+
+    public void setProviderId(String providerId) {
+        this.providerId = providerId;
+    }
+
+    public String getPictureUrl() {
+        return pictureUrl;
+    }
+
+    public void setPictureUrl(String pictureUrl) {
+        this.pictureUrl = pictureUrl;
     }
 }
 

@@ -3,6 +3,7 @@ package com.tan90.projects.pensieve.service;
 import com.tan90.projects.pensieve.entity.User;
 import com.tan90.projects.pensieve.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,6 +20,9 @@ public class UserService {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
     // Helper method to return a copy of User with password set to null
     private User maskPassword(User user) {
         if (user == null) return null;
@@ -30,10 +34,16 @@ public class UserService {
         masked.setPicture(user.getPicture());
         masked.setPassword(null);
         masked.setProjects(null);
+        masked.setProvider(user.getProvider());
         return masked;
     }
 
-    // Helper method to hash a string using MD5
+    // Helper method to check if a password hash is MD5 format
+    private boolean isMd5Hash(String hash) {
+        return hash != null && hash.matches("^[a-fA-F0-9]{32}$");
+    }
+
+    // Helper method to hash a string using MD5 (for backward compatibility)
     private String hashPasswordMD5(String password) {
         if (password == null) return null;
         try {
@@ -47,6 +57,12 @@ public class UserService {
         } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException("MD5 algorithm not found", e);
         }
+    }
+
+    // Helper method to hash password with bcrypt
+    private String hashPasswordBcrypt(String password) {
+        if (password == null) return null;
+        return passwordEncoder.encode(password);
     }
 
     public List<User> getAllUsers() {
@@ -74,7 +90,7 @@ public class UserService {
             throw new IllegalArgumentException("User with email " + user.getEmail() + " already exists");
         }
 
-        if (userRepository.existsByUsername(user.getUsername())) {
+        if (user.getUsername() != null && userRepository.existsByUsername(user.getUsername())) {
             throw new IllegalArgumentException("User with username " + user.getUsername() + " already exists");
         }
 
@@ -83,9 +99,14 @@ public class UserService {
             user.setId(UUID.randomUUID().toString());
         }
 
-        // Hash password with MD5 before saving
+        // Set default provider if not set
+        if (user.getProvider() == null) {
+            user.setProvider("LOCAL");
+        }
+
+        // Hash password with bcrypt for new users (no longer using MD5)
         if (user.getPassword() != null && !user.getPassword().isEmpty()) {
-            user.setPassword(hashPasswordMD5(user.getPassword()));
+            user.setPassword(hashPasswordBcrypt(user.getPassword()));
         }
 
         return userRepository.save(user);
@@ -97,9 +118,9 @@ public class UserService {
 
         user.setEmail(userDetails.getEmail());
         user.setUsername(userDetails.getUsername());
-        // Hash password with MD5 before saving
+        // Hash password with bcrypt before saving
         if (userDetails.getPassword() != null && !userDetails.getPassword().isEmpty()) {
-            user.setPassword(hashPasswordMD5(userDetails.getPassword()));
+            user.setPassword(hashPasswordBcrypt(userDetails.getPassword()));
         }
         user.setName(userDetails.getName());
         user.setPicture(userDetails.getPicture());

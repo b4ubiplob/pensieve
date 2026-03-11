@@ -1,18 +1,38 @@
 // API Configuration
 const API_BASE_URL = 'http://localhost:8080/api/v1';
 
-// Helper function for making HTTP requests
+// Import auth functions
+import { getAccessToken, refreshAccessToken, clearTokens } from './auth.js';
+
+// Helper function for making HTTP requests with JWT
 const apiRequest = async (endpoint, options = {}) => {
+  const token = getAccessToken();
   const url = `${API_BASE_URL}${endpoint}`;
   const config = {
     headers: {
       'Content-Type': 'application/json',
+      ...(token && { 'Authorization': `Bearer ${token}` }),
       ...options.headers,
     },
     ...options,
   };
 
-  const response = await fetch(url, config);
+  let response = await fetch(url, config);
+
+  // Auto-refresh on 401 Unauthorized
+  if (response.status === 401 && !options._retry) {
+    const refreshed = await refreshAccessToken();
+    if (refreshed) {
+      // Retry the request with new token
+      options._retry = true;
+      return apiRequest(endpoint, options);
+    } else {
+      // Refresh failed, clear tokens and redirect to login
+      clearTokens();
+      window.location.href = '/login';
+    }
+  }
+
   return response;
 };
 

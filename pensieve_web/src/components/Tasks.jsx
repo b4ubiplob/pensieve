@@ -440,6 +440,20 @@ function Tasks() {
     return user.username?.substring(0, 2).toUpperCase() || 'U';
   };
 
+  // Render user icon with profile picture or initials
+  const renderUserIcon = () => {
+    if (user.pictureUrl) {
+      return (
+        <img
+          src={user.pictureUrl}
+          alt={user.name || user.username}
+          className="user-icon-image"
+        />
+      );
+    }
+    return getUserInitials();
+  };
+
   if (!project || !user) {
     return null;
   }
@@ -459,12 +473,12 @@ function Tasks() {
           <div className="navbar-logo">{project.name}</div>
         </div>
         <div className="user-menu">
-          <div 
+          <div
             className="user-icon"
             onClick={() => setShowDropdown(!showDropdown)}
             title={user.name || user.username}
           >
-            {getUserInitials()}
+            {renderUserIcon()}
           </div>
           {showDropdown && (
             <div className="dropdown-menu">

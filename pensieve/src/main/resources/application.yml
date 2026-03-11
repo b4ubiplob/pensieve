@@ -21,6 +21,28 @@ spring:
   application:
     name: pensieve
 
+  # OAuth2 configuration
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID}
+            client-secret: ${GOOGLE_CLIENT_SECRET}
+            scope: email, profile
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+        provider:
+          google:
+            user-name-attribute: sub
+
+# JWT configuration
+jwt:
+  secret: ${JWT_SECRET}
+  expiration:
+    access-token: 3600000  # 1 hour in ms
+    refresh-token: 604800000  # 7 days in ms
+  issuer: pensieve
+
 # Server configuration
 server:
   port: 8080

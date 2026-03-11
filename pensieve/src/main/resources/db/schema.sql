@@ -8,9 +8,13 @@ SET search_path TO db_pensieve;
 CREATE TABLE users (
     id VARCHAR(64) PRIMARY KEY,
     email VARCHAR(256) NOT NULL,
-    password VARCHAR(256) NOT NULL,
+    username VARCHAR(256),
+    password VARCHAR(256),
     picture BYTEA,
-    name VARCHAR(256) NOT NULL
+    name VARCHAR(256) NOT NULL,
+    provider VARCHAR(50) DEFAULT 'LOCAL',
+    provider_id VARCHAR(256),
+    picture_url VARCHAR(512)
 );
 
 -- Create projects table
@@ -73,4 +77,10 @@ CREATE INDEX idx_projects_created_date ON projects(created_date);
 CREATE INDEX idx_list_created_date ON list(created_date);
 CREATE INDEX idx_task_created_date ON task(created_date);
 CREATE INDEX idx_task_due_date ON task(due_date);
+
+-- Add indexes for user authentication
+CREATE INDEX idx_users_email ON users(email);
+CREATE INDEX idx_users_username ON users(username);
+CREATE INDEX idx_users_provider ON users(provider);
+CREATE INDEX idx_users_provider_id ON users(provider_id);
 

@@ -1,13 +1,13 @@
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { projectAPI } from '../services/api';
+import { logout, getStoredUser } from '../services/auth';
 import './Projects.css';
 
 function Projects() {
-  const location = useLocation();
   const navigate = useNavigate();
-  const user = location.state?.user;
-  
+  const [user, setUser] = useState(null);
+
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -19,15 +19,17 @@ function Projects() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    // Redirect to login if no user data
-    if (!user) {
+    // Load user from localStorage
+    const storedUser = getStoredUser();
+    if (!storedUser) {
       navigate('/login');
       return;
     }
+    setUser(storedUser);
 
     // Fetch projects for the user
-    fetchProjects();
-  }, [user, navigate]);
+    fetchProjects(storedUser.id);
+  }, [navigate]);
 
   useEffect(() => {
     // Close dropdown when clicking outside
@@ -41,12 +43,12 @@ function Projects() {
     return () => document.removeEventListener('click', handleClickOutside);
   }, [showDropdown]);
 
-  const fetchProjects = async () => {
+  const fetchProjects = async (userId) => {
     try {
       setLoading(true);
       setError(null);
-      const response = await projectAPI.getProjects(user.id);
-      
+      const response = await projectAPI.getProjects(userId);
+
       if (response.ok) {
         const data = await response.json();
         setProjects(data);
@@ -61,7 +63,8 @@ function Projects() {
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await logout();
     navigate('/login');
   };
 
@@ -86,16 +89,18 @@ function Projects() {
 
   const handleSubmitProject = async (e) => {
     e.preventDefault();
-    
+
     if (!projectName.trim()) {
       setFormError('Project name is required');
       return;
     }
 
+    if (!user) return;
+
     try {
       setSubmitting(true);
       setFormError(null);
-      
+
       const response = await projectAPI.createProject(user.id, {
         name: projectName.trim(),
         description: projectDescription.trim(),
@@ -104,7 +109,7 @@ function Projects() {
       if (response.status === 201) {
         // Success - close dialog and refresh projects
         handleCloseDialog();
-        await fetchProjects();
+        await fetchProjects(user.id);
       } else {
         const errorData = await response.json().catch(() => ({}));
         setFormError(errorData.message || 'Failed to create project');
@@ -133,6 +138,20 @@ function Projects() {
     return user.username?.substring(0, 2).toUpperCase() || 'U';
   };
 
+  // Render user icon with profile picture or initials
+  const renderUserIcon = () => {
+    if (user.pictureUrl) {
+      return (
+        <img
+          src={user.pictureUrl}
+          alt={user.name || user.username}
+          className="user-icon-image"
+        />
+      );
+    }
+    return getUserInitials();
+  };
+
   if (!user) {
     return null;
   }
@@ -143,12 +162,12 @@ function Projects() {
       <nav className="navbar">
         <div className="navbar-logo">Pensieve</div>
         <div className="user-menu">
-          <div 
+          <div
             className="user-icon"
             onClick={() => setShowDropdown(!showDropdown)}
             title={user.name || user.username}
           >
-            {getUserInitials()}
+            {renderUserIcon()}
           </div>
           {showDropdown && (
             <div className="dropdown-menu">
