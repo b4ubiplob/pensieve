@@ -34,12 +34,15 @@ function Tasks() {
   const [taskPriority, setTaskPriority] = useState('MEDIUM');
   const [taskFormError, setTaskFormError] = useState(null);
   const [taskSubmitting, setTaskSubmitting] = useState(false);
-  const [viewMode, setViewMode] = useState('list'); // 'list' or 'kanban'
+  const [viewMode, setViewMode] = useState('kanban'); // 'list' or 'kanban'
   const [draggedTask, setDraggedTask] = useState(null);
   const [showDeleteTaskConfirm, setShowDeleteTaskConfirm] = useState(false);
   const [deletingTask, setDeletingTask] = useState(null);
   const [deleteTaskMessage, setDeleteTaskMessage] = useState('');
   const [taskDeleting, setTaskDeleting] = useState(false);
+  const [showEditTaskDialog, setShowEditTaskDialog] = useState(false);
+  const [editingTask, setEditingTask] = useState(null);
+  const [editTaskStatus, setEditTaskStatus] = useState('CREATED');
 
   useEffect(() => {
     // Redirect if no project or user data
@@ -383,11 +386,92 @@ function Tasks() {
   };
 
   const getTasksByStatus = (status) => {
-    return tasks.filter(task => task.status === status);
+    return tasks
+      .filter(task => task.status === status)
+      .sort((a, b) => {
+        // Sort by created date in descending order (most recent first)
+        const dateA = new Date(a.createdDate || 0);
+        const dateB = new Date(b.createdDate || 0);
+        return dateB - dateA;
+      });
   };
 
   const handleEditTask = (task) => {
-    navigate('/task', { state: { task, list: selectedList, project, user } });
+    setEditingTask(task);
+    setTaskTitle(task.title || '');
+    setTaskDescription(task.description || '');
+    setTaskDueDate(task.dueDate || '');
+    setTaskReminderDate(task.reminderDate || '');
+    setTaskPriority(task.priority || 'MEDIUM');
+    setEditTaskStatus(task.status || 'CREATED');
+    setTaskFormError(null);
+    setShowEditTaskDialog(true);
+  };
+
+  const handleCloseEditTaskDialog = () => {
+    setShowEditTaskDialog(false);
+    setEditingTask(null);
+    setTaskFormError(null);
+    setTaskTitle('');
+    setTaskDescription('');
+    setTaskDueDate('');
+    setTaskReminderDate('');
+    setTaskPriority('MEDIUM');
+    setEditTaskStatus('CREATED');
+  };
+
+  const handleUpdateTask = async (e) => {
+    e.preventDefault();
+
+    if (!taskTitle.trim()) {
+      setTaskFormError('Task title is required');
+      return;
+    }
+
+    try {
+      setTaskSubmitting(true);
+      setTaskFormError(null);
+
+      const taskData = {
+        title: taskTitle.trim(),
+        description: taskDescription.trim(),
+        priority: taskPriority,
+        status: editTaskStatus,
+      };
+
+      // Add dates only if they are provided
+      if (taskDueDate) {
+        taskData.dueDate = taskDueDate;
+      }
+      if (taskReminderDate) {
+        taskData.reminderDate = taskReminderDate;
+      }
+
+      // If status is being set to COMPLETED, add completion date
+      if (editTaskStatus === 'COMPLETED' && editingTask.status !== 'COMPLETED') {
+        taskData.completedDate = new Date().toISOString();
+      }
+      // If status is being changed from COMPLETED to something else, clear completion date
+      if (editTaskStatus !== 'COMPLETED' && editingTask.status === 'COMPLETED') {
+        taskData.completedDate = null;
+      }
+
+      const response = await taskAPI.updateTask(editingTask.id, taskData);
+
+      if (response.ok) {
+        // Success - close dialog and refresh tasks
+        handleCloseEditTaskDialog();
+        await fetchTasks(selectedList.id);
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        setTaskFormError(errorData.message || 'Failed to update task');
+      }
+    } catch (err) {
+      setTaskFormError('Failed to connect to server');
+      console.error('Error updating task:', err);
+    } finally {
+      setTaskSubmitting(false);
+    }
   };
 
   const handleDeleteTaskClick = (e, task) => {
@@ -407,7 +491,7 @@ function Tasks() {
     try {
       setTaskDeleting(true);
       setDeleteTaskMessage('');
-      
+
       const response = await taskAPI.deleteTask(deletingTask.id);
 
       if (response.ok) {
@@ -425,6 +509,59 @@ function Tasks() {
       console.error('Error deleting task:', err);
     } finally {
       setTaskDeleting(false);
+    }
+  };
+
+  const handleSetToCompleted = async (task) => {
+    try {
+      const response = await taskAPI.updateTask(task.id, {
+        status: 'COMPLETED',
+        completedDate: new Date().toISOString(),
+      });
+
+      if (response.ok) {
+        // Refresh tasks to show updated status
+        await fetchTasks(selectedList.id);
+      } else {
+        console.error('Failed to update task status');
+      }
+    } catch (err) {
+      console.error('Error updating task status:', err);
+    }
+  };
+
+  const handleSetToInProgress = async (task) => {
+    try {
+      const response = await taskAPI.updateTask(task.id, {
+        status: 'IN_PROGRESS',
+      });
+
+      if (response.ok) {
+        // Refresh tasks to show updated status
+        await fetchTasks(selectedList.id);
+      } else {
+        console.error('Failed to update task status');
+      }
+    } catch (err) {
+      console.error('Error updating task status:', err);
+    }
+  };
+
+  const handleReopenTask = async (task) => {
+    try {
+      const response = await taskAPI.updateTask(task.id, {
+        status: 'CREATED',
+        completedDate: null,
+      });
+
+      if (response.ok) {
+        // Refresh tasks to show updated status
+        await fetchTasks(selectedList.id);
+      } else {
+        console.error('Failed to update task status');
+      }
+    } catch (err) {
+      console.error('Error updating task status:', err);
     }
   };
 
@@ -602,14 +739,41 @@ function Tasks() {
                         )}
                       </div>
                       <div className="task-actions">
-                        <button 
+                        {task.status === 'CREATED' && (
+                          <button
+                            className="task-action-btn start-task-btn"
+                            onClick={() => handleSetToInProgress(task)}
+                            title="Set to In Progress"
+                          >
+                            ▶ Start
+                          </button>
+                        )}
+                        {task.status === 'IN_PROGRESS' && (
+                          <button
+                            className="task-action-btn complete-task-btn"
+                            onClick={() => handleSetToCompleted(task)}
+                            title="Set to Completed"
+                          >
+                            ✓ Complete
+                          </button>
+                        )}
+                        {task.status === 'COMPLETED' && (
+                          <button
+                            className="task-action-btn reopen-task-btn"
+                            onClick={() => handleReopenTask(task)}
+                            title="Reopen Task"
+                          >
+                            ↺ Reopen
+                          </button>
+                        )}
+                        <button
                           className="task-action-btn edit-task-btn"
                           onClick={() => handleEditTask(task)}
                           title="Edit Task"
                         >
                           ✏️
                         </button>
-                        <button 
+                        <button
                           className="task-action-btn delete-task-btn"
                           onClick={(e) => handleDeleteTaskClick(e, task)}
                           title="Delete Task"
@@ -991,6 +1155,132 @@ function Tasks() {
                   disabled={taskSubmitting}
                 >
                   {taskSubmitting ? 'Creating...' : 'Create Task'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Task Dialog */}
+      {showEditTaskDialog && (
+        <div className="dialog-overlay" onClick={handleCloseEditTaskDialog}>
+          <div className="dialog" onClick={(e) => e.stopPropagation()}>
+            <div className="dialog-header">
+              <h2>Edit Task</h2>
+              <button
+                className="dialog-close"
+                onClick={handleCloseEditTaskDialog}
+                type="button"
+              >
+                ×
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateTask}>
+              <div className="form-group">
+                <label htmlFor="edit-task-title">Title *</label>
+                <input
+                  id="edit-task-title"
+                  type="text"
+                  className="form-input"
+                  value={taskTitle}
+                  onChange={(e) => setTaskTitle(e.target.value)}
+                  placeholder="Enter task title"
+                  disabled={taskSubmitting}
+                  autoFocus
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="edit-task-description">Description</label>
+                <textarea
+                  id="edit-task-description"
+                  className="form-textarea"
+                  value={taskDescription}
+                  onChange={(e) => setTaskDescription(e.target.value)}
+                  placeholder="Enter task description (optional)"
+                  rows="3"
+                  disabled={taskSubmitting}
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="edit-task-status">Status</label>
+                <select
+                  id="edit-task-status"
+                  className="form-select"
+                  value={editTaskStatus}
+                  onChange={(e) => setEditTaskStatus(e.target.value)}
+                  disabled={taskSubmitting}
+                >
+                  <option value="CREATED">Created</option>
+                  <option value="IN_PROGRESS">In Progress</option>
+                  <option value="COMPLETED">Completed</option>
+                  <option value="BLOCKED">Blocked</option>
+                  <option value="PAUSED">Paused</option>
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="edit-task-due-date">Due Date</label>
+                <input
+                  id="edit-task-due-date"
+                  type="date"
+                  className="form-input"
+                  value={taskDueDate}
+                  onChange={(e) => setTaskDueDate(e.target.value)}
+                  disabled={taskSubmitting}
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="edit-task-reminder-date">Reminder Date</label>
+                <input
+                  id="edit-task-reminder-date"
+                  type="date"
+                  className="form-input"
+                  value={taskReminderDate}
+                  onChange={(e) => setTaskReminderDate(e.target.value)}
+                  disabled={taskSubmitting}
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="edit-task-priority">Priority</label>
+                <select
+                  id="edit-task-priority"
+                  className="form-select"
+                  value={taskPriority}
+                  onChange={(e) => setTaskPriority(e.target.value)}
+                  disabled={taskSubmitting}
+                >
+                  <option value="VERY_HIGH">Very High</option>
+                  <option value="HIGH">High</option>
+                  <option value="MEDIUM">Medium</option>
+                  <option value="LOW">Low</option>
+                </select>
+              </div>
+
+              {taskFormError && (
+                <div className="form-error">{taskFormError}</div>
+              )}
+
+              <div className="dialog-actions">
+                <button
+                  type="button"
+                  className="btn-cancel"
+                  onClick={handleCloseEditTaskDialog}
+                  disabled={taskSubmitting}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn-submit"
+                  disabled={taskSubmitting}
+                >
+                  {taskSubmitting ? 'Updating...' : 'Update Task'}
                 </button>
               </div>
             </form>
