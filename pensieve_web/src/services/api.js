@@ -59,8 +59,25 @@ export const projectAPI = {
     return apiRequest(`/projects?userId=${userId}`);
   },
 
+  getProjectById: async (projectId) => {
+    return apiRequest(`/projects/${projectId}`);
+  },
+
   createProject: async (userId, projectData) => {
     return apiRequest(`/projects?userId=${userId}`, {
+      method: 'POST',
+      body: JSON.stringify(projectData),
+    });
+  },
+
+  deleteProject: async (projectId) => {
+    return apiRequest(`/projects/${projectId}`, {
+      method: 'DELETE',
+    });
+  },
+
+  importProject: async (userId, projectData) => {
+    return apiRequest(`/projects/import?userId=${userId}`, {
       method: 'POST',
       body: JSON.stringify(projectData),
     });
@@ -100,8 +117,21 @@ export const taskAPI = {
     return apiRequest(`/tasks?listId=${listId}`);
   },
 
-  createTask: async (listId, taskData) => {
-    return apiRequest(`/tasks?listId=${listId}`, {
+  getTaskById: async (taskId) => {
+    return apiRequest(`/tasks/${taskId}`);
+  },
+
+  getTasksByUser: async (userId, status) => {
+    const statusParam = status ? `&status=${status}` : '';
+    return apiRequest(`/tasks?userId=${userId}${statusParam}`);
+  },
+
+  createTask: async (listId, taskData, parentTaskId = null) => {
+    const url = parentTaskId
+      ? `/tasks?parentTaskId=${parentTaskId}`
+      : `/tasks?listId=${listId}`;
+
+    return apiRequest(url, {
       method: 'POST',
       body: JSON.stringify(taskData),
     });

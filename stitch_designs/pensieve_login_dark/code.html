@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Pensieve - Login</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200;300;400;500;700;800&amp;family=Inter:wght@300;400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "on-secondary-container": "#c2d2e8",
+              "on-secondary": "#414f62",
+              "tertiary": "#47c4ff",
+              "surface-dim": "#060e20",
+              "on-error-container": "#ffb2b9",
+              "error-dim": "#d73357",
+              "primary-fixed": "#8d98ff",
+              "secondary-fixed": "#cfdef5",
+              "primary-fixed-dim": "#7f8af6",
+              "primary-dim": "#8a95ff",
+              "secondary-container": "#39485a",
+              "on-tertiary-fixed": "#001a27",
+              "secondary-dim": "#c1d0e6",
+              "primary-container": "#8d98ff",
+              "on-tertiary": "#003b52",
+              "on-surface-variant": "#a3aac4",
+              "on-primary-fixed-variant": "#0c1889",
+              "error-container": "#a70138",
+              "surface-container": "#0f1930",
+              "outline-variant": "#40485d",
+              "error": "#ff6e84",
+              "background": "#060e20",
+              "on-error": "#490013",
+              "on-primary": "#101b8b",
+              "inverse-surface": "#faf8ff",
+              "on-primary-container": "#000a7b",
+              "surface-container-lowest": "#000000",
+              "surface-container-low": "#091328",
+              "on-background": "#dee5ff",
+              "tertiary-fixed-dim": "#1bafe9",
+              "secondary": "#cfdef5",
+              "on-surface": "#dee5ff",
+              "on-secondary-fixed-variant": "#4a596c",
+              "on-primary-fixed": "#000000",
+              "surface-bright": "#1f2b49",
+              "tertiary-dim": "#05a9e3",
+              "on-tertiary-fixed-variant": "#003e56",
+              "surface": "#060e20",
+              "surface-container-high": "#141f38",
+              "outline": "#6d758c",
+              "surface-tint": "#9fa7ff",
+              "secondary-fixed-dim": "#c1d0e6",
+              "tertiary-fixed": "#37bcf7",
+              "primary": "#9fa7ff",
+              "surface-container-highest": "#192540",
+              "surface-variant": "#192540",
+              "on-tertiary-container": "#003044",
+              "inverse-on-surface": "#4d556b",
+              "tertiary-container": "#2db7f2",
+              "inverse-primary": "#4954bc",
+              "on-secondary-fixed": "#2e3d4e"
+            },
+            fontFamily: {
+              "headline": ["Manrope"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        body {
+            background-color: #060e20;
+            color: #dee5ff;
+            font-family: 'Inter', sans-serif;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+        }
+        .editorial-gradient {
+            background: linear-gradient(135deg, #0f1930 0%, #060e20 100%);
+        }
+        .glass-panel {
+            background: rgba(20, 31, 56, 0.7);
+            backdrop-filter: blur(20px);
+        }
+        .button-gradient {
+            background: linear-gradient(135deg, #9fa7ff 0%, #8d98ff 100%);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col overflow-x-hidden">
+<main class="flex-grow flex items-center justify-center p-6 lg:p-12 relative">
+<!-- Background Architectural Elements -->
+<div class="absolute inset-0 z-0 overflow-hidden pointer-events-none">
+<div class="absolute -top-[10%] -left-[10%] w-[40%] h-[40%] bg-primary/5 blur-[120px] rounded-full"></div>
+<div class="absolute top-[20%] right-[5%] w-[30%] h-[50%] bg-tertiary/5 blur-[100px] rounded-full"></div>
+<div class="absolute bottom-0 left-0 w-full h-1/2 bg-gradient-to-t from-surface-container-lowest to-transparent"></div>
+</div>
+<!-- Layout Container -->
+<div class="z-10 w-full max-w-6xl grid grid-cols-1 lg:grid-cols-2 items-stretch gap-0 bg-surface-container rounded-lg overflow-hidden shadow-2xl shadow-indigo-950/50">
+<!-- Branding/Visual Side -->
+<div class="hidden lg:flex flex-col justify-between p-16 editorial-gradient relative overflow-hidden">
+<div class="relative z-10">
+<div class="text-3xl font-black tracking-tighter text-[#dee5ff] uppercase font-headline mb-12">
+                        Pensieve
+                    </div>
+<h1 class="font-headline text-5xl font-light tracking-tight leading-[1.1] text-on-background mb-8 max-w-md">
+                        The <span class="font-bold text-primary">Architectural</span> Void of Thought.
+                    </h1>
+<p class="font-body text-on-surface-variant text-lg leading-relaxed max-w-sm">
+                        Enter a space designed for clarity, structural precision, and the quiet authority of focused intent.
+                    </p>
+</div>
+<div class="relative z-10">
+<div class="flex items-center gap-3 bg-surface-container-lowest/30 backdrop-blur-sm px-4 py-2 rounded-full w-fit">
+<span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+<span class="text-xs font-label uppercase tracking-widest text-on-surface-variant">System Status: Optimal</span>
+</div>
+</div>
+<!-- Abstract Decorative Image -->
+<div class="absolute right-0 bottom-0 w-3/4 h-3/4 opacity-40 pointer-events-none translate-x-1/4 translate-y-1/4">
+<img alt="Abstract dark blue architectural curves and shadows" class="w-full h-full object-cover rounded-tl-3xl" data-alt="Abstract dark blue architectural curves and shadows" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCg-KWpBgmS1S3VyKMc-my1N7w0WkNA6VImf-sSALhLux_63T-nXwvIJHgynqR1G6Fj5OX8BnaS5b2Ve34BZKYQGBSP8npGv8dckrsD62SjxYD7KbSZRCnCmMSeu9WrwzBNhahP3bT8cBBoGFhwPlG5TQfYqOIMkaeo7qMKfJ0nRx1ZvuMLeeIAz1Pkz9KFDdt5PNhZ8ConAo-DGBlwXkVthNVZ3wj8gLskth_SB_FA0UMsRDQZg1DA-XCFeaZv9sBwKeLolElOWi0"/>
+</div>
+</div>
+<!-- Login Form Side -->
+<div class="flex flex-col justify-center p-8 md:p-16 lg:p-24 bg-surface-container-high relative">
+<div class="lg:hidden mb-12">
+<div class="text-2xl font-black tracking-tighter text-[#dee5ff] uppercase font-headline">
+                        Pensieve
+                    </div>
+</div>
+<div class="max-w-md w-full mx-auto">
+<div class="mb-10">
+<h2 class="font-headline text-3xl font-bold text-on-background mb-2">Welcome back</h2>
+<p class="font-body text-on-surface-variant">Continue your journey into the void.</p>
+</div>
+<!-- Social Login -->
+<button class="w-full flex items-center justify-center gap-3 bg-surface-container-highest hover:bg-surface-bright transition-all duration-300 py-4 px-6 rounded-DEFAULT border border-outline-variant/15 group">
+<svg class="w-5 h-5" viewbox="0 0 24 24">
+<path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"></path>
+<path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"></path>
+<path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"></path>
+<path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"></path>
+</svg>
+<span class="font-label font-medium text-on-surface">Sign in with Google</span>
+</button>
+<div class="flex items-center my-10 gap-4">
+<div class="h-[1px] flex-grow bg-outline-variant/20"></div>
+<span class="text-xs font-label uppercase tracking-widest text-on-surface-variant/60">or email</span>
+<div class="h-[1px] flex-grow bg-outline-variant/20"></div>
+</div>
+<!-- Credentials Form -->
+<form class="space-y-6" onsubmit="return false;">
+<div class="space-y-2">
+<label class="block font-label text-xs font-bold uppercase tracking-widest text-on-surface-variant" for="email">Email Address</label>
+<input class="w-full bg-surface-container-highest border border-outline-variant/15 focus:border-primary/40 focus:ring-0 rounded-DEFAULT px-5 py-4 text-on-surface font-body placeholder:text-on-surface-variant/30 transition-all outline-none" id="email" placeholder="name@example.com" type="email"/>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between items-center">
+<label class="block font-label text-xs font-bold uppercase tracking-widest text-on-surface-variant" for="password">Password</label>
+<a class="text-xs font-label text-primary hover:text-primary-dim transition-colors" href="#">Forgot?</a>
+</div>
+<input class="w-full bg-surface-container-highest border border-outline-variant/15 focus:border-primary/40 focus:ring-0 rounded-DEFAULT px-5 py-4 text-on-surface font-body placeholder:text-on-surface-variant/30 transition-all outline-none" id="password" placeholder="••••••••" type="password"/>
+</div>
+<div class="pt-4">
+<button class="w-full button-gradient py-5 rounded-DEFAULT text-on-primary font-headline font-bold text-lg hover:scale-[1.01] active:scale-[0.98] transition-all shadow-lg shadow-primary/20" type="submit">
+                                Sign In
+                            </button>
+</div>
+</form>
+<div class="mt-12 text-center">
+<p class="font-body text-sm text-on-surface-variant">
+                            New to the architecture? <a class="text-primary font-bold hover:underline underline-offset-4 decoration-primary/30" href="#">Join the Beta</a>
+</p>
+</div>
+</div>
+<div class="mt-20 lg:absolute lg:bottom-12 lg:left-0 lg:right-0 text-center">
+<div class="lg:hidden flex items-center justify-center gap-3 bg-surface-container-lowest/30 backdrop-blur-sm px-4 py-2 rounded-full w-fit mx-auto mb-6">
+<span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+<span class="text-[10px] font-label uppercase tracking-widest text-on-surface-variant">System Status: Optimal</span>
+</div>
+</div>
+</div>
+</div>
+</main>
+<footer class="w-full py-12 px-12 flex flex-col md:flex-row justify-between items-center bg-surface-container-lowest bg-gradient-to-t from-surface-container to-transparent mt-auto">
+<div class="font-headline font-bold text-[#dee5ff] mb-6 md:mb-0">
+            Pensieve.
+        </div>
+<div class="flex gap-8">
+<a class="text-on-surface-variant text-sm font-body hover:text-on-surface transition-colors" href="#">Philosophy</a>
+<a class="text-on-surface-variant text-sm font-body hover:text-on-surface transition-colors" href="#">Manifesto</a>
+<a class="text-on-surface-variant text-sm font-body hover:text-on-surface transition-colors" href="#">Privacy</a>
+<a class="text-on-surface-variant text-sm font-body hover:text-on-surface transition-colors" href="#">Terms</a>
+</div>
+<div class="mt-8 md:mt-0 text-on-surface-variant/50 text-xs font-body">
+            © 2024 Pensieve. The Architectural Void.
+        </div>
+</footer>
+</body></html>

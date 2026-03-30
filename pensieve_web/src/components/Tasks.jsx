@@ -1,6 +1,8 @@
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { listAPI, taskAPI } from '../services/api';
+import { logout } from '../services/auth';
+import Header from './Header';
 import './Tasks.css';
 
 function Tasks() {
@@ -8,87 +10,86 @@ function Tasks() {
   const navigate = useNavigate();
   const project = location.state?.project;
   const user = location.state?.user;
-  
+
   const [lists, setLists] = useState([]);
   const [selectedList, setSelectedList] = useState(null);
   const [tasks, setTasks] = useState([]);
   const [loadingLists, setLoadingLists] = useState(true);
   const [loadingTasks, setLoadingTasks] = useState(false);
   const [error, setError] = useState(null);
-  const [showDropdown, setShowDropdown] = useState(false);
-  const [showListDialog, setShowListDialog] = useState(false);
-  const [listName, setListName] = useState('');
-  const [listDescription, setListDescription] = useState('');
-  const [listFormError, setListFormError] = useState(null);
-  const [listSubmitting, setListSubmitting] = useState(false);
-  const [showEditListDialog, setShowEditListDialog] = useState(false);
-  const [editingList, setEditingList] = useState(null);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [deletingList, setDeletingList] = useState(null);
-  const [deleteMessage, setDeleteMessage] = useState('');
   const [showTaskDialog, setShowTaskDialog] = useState(false);
   const [taskTitle, setTaskTitle] = useState('');
   const [taskDescription, setTaskDescription] = useState('');
   const [taskDueDate, setTaskDueDate] = useState('');
-  const [taskReminderDate, setTaskReminderDate] = useState('');
   const [taskPriority, setTaskPriority] = useState('MEDIUM');
+  const [taskStatus, setTaskStatus] = useState('CREATED');
   const [taskFormError, setTaskFormError] = useState(null);
   const [taskSubmitting, setTaskSubmitting] = useState(false);
-  const [viewMode, setViewMode] = useState('kanban'); // 'list' or 'kanban'
-  const [draggedTask, setDraggedTask] = useState(null);
-  const [showDeleteTaskConfirm, setShowDeleteTaskConfirm] = useState(false);
-  const [deletingTask, setDeletingTask] = useState(null);
-  const [deleteTaskMessage, setDeleteTaskMessage] = useState('');
-  const [taskDeleting, setTaskDeleting] = useState(false);
-  const [showEditTaskDialog, setShowEditTaskDialog] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
-  const [editTaskStatus, setEditTaskStatus] = useState('CREATED');
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    const saved = localStorage.getItem('theme');
+    return saved ? saved === 'dark' : true;
+  });
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [draggedTask, setDraggedTask] = useState(null);
+  const [viewMode, setViewMode] = useState('kanban'); // 'kanban' or 'list'
+  const [hideCompleted, setHideCompleted] = useState(false);
+  const [showListDialog, setShowListDialog] = useState(false);
+  const [listName, setListName] = useState('');
+  const [listDescription, setListDescription] = useState('');
+  const [editingList, setEditingList] = useState(null);
+  const [listFormError, setListFormError] = useState(null);
+  const [listSubmitting, setListSubmitting] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [confirmAction, setConfirmAction] = useState(null);
+  const [confirmMessage, setConfirmMessage] = useState('');
+  const [collapsedGroups, setCollapsedGroups] = useState({
+    'CREATED': false,        // Expanded by default
+    'IN_PROGRESS': true,     // Collapsed
+    'BLOCKED': true,         // Collapsed
+    'COMPLETED': true        // Collapsed
+  });
 
   useEffect(() => {
-    // Redirect if no project or user data
+    const root = document.documentElement;
+    if (isDarkMode) {
+      root.classList.add('dark');
+      root.setAttribute('data-theme', 'dark');
+    } else {
+      root.classList.remove('dark');
+      root.setAttribute('data-theme', 'light');
+    }
+    localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
+  }, [isDarkMode]);
+
+  useEffect(() => {
     if (!project || !user) {
       navigate('/projects');
       return;
     }
-
-    // Fetch lists for the project
     fetchLists();
   }, [project, user, navigate]);
 
   useEffect(() => {
-    // Fetch tasks when a list is selected
     if (selectedList) {
       fetchTasks(selectedList.id);
     }
   }, [selectedList]);
-
-  useEffect(() => {
-    // Close dropdown when clicking outside
-    const handleClickOutside = (event) => {
-      if (showDropdown && !event.target.closest('.user-menu')) {
-        setShowDropdown(false);
-      }
-    };
-
-    document.addEventListener('click', handleClickOutside);
-    return () => document.removeEventListener('click', handleClickOutside);
-  }, [showDropdown]);
 
   const fetchLists = async () => {
     try {
       setLoadingLists(true);
       setError(null);
       const response = await listAPI.getLists(project.id);
-      
+
       if (response.ok) {
         const data = await response.json();
-        // Sort lists alphabetically by name
-        const sortedLists = data.sort((a, b) => 
+        const sortedLists = data.sort((a, b) =>
           a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
         );
         setLists(sortedLists);
-        
-        // Select the first list if available
+
         if (sortedLists.length > 0) {
           setSelectedList(sortedLists[0]);
         }
@@ -97,7 +98,6 @@ function Tasks() {
       }
     } catch (err) {
       setError('Failed to connect to server');
-      console.error('Error fetching lists:', err);
     } finally {
       setLoadingLists(false);
     }
@@ -107,16 +107,13 @@ function Tasks() {
     try {
       setLoadingTasks(true);
       const response = await taskAPI.getTasks(listId);
-      
       if (response.ok) {
         const data = await response.json();
         setTasks(data);
       } else {
-        console.error('Failed to load tasks');
         setTasks([]);
       }
     } catch (err) {
-      console.error('Error fetching tasks:', err);
       setTasks([]);
     } finally {
       setLoadingTasks(false);
@@ -127,228 +124,190 @@ function Tasks() {
     navigate('/projects', { state: { user } });
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await logout();
     navigate('/login');
   };
 
-  const handleEditProfile = () => {
-    // TODO: Implement edit profile functionality
-    alert('Edit profile feature coming soon!');
+  const toggleTheme = () => {
+    setIsDarkMode(!isDarkMode);
   };
 
-  const handleCreateList = () => {
-    setShowListDialog(true);
-    setListFormError(null);
-    setListName('');
-    setListDescription('');
+  const toggleSidebar = () => {
+    setIsSidebarCollapsed(!isSidebarCollapsed);
   };
 
-  const handleCloseListDialog = () => {
-    setShowListDialog(false);
-    setListFormError(null);
-    setListName('');
-    setListDescription('');
-  };
-
-  const handleSubmitList = async (e) => {
-    e.preventDefault();
-    
-    if (!listName.trim()) {
-      setListFormError('List name is required');
-      return;
-    }
-
-    try {
-      setListSubmitting(true);
-      setListFormError(null);
-      
-      const response = await listAPI.createList(project.id, {
-        name: listName.trim(),
-        description: listDescription.trim(),
-      });
-
-      if (response.status === 201) {
-        // Success - close dialog and refresh lists
-        handleCloseListDialog();
-        await fetchLists();
-      } else {
-        const errorData = await response.json().catch(() => ({}));
-        setListFormError(errorData.message || 'Failed to create list');
-      }
-    } catch (err) {
-      setListFormError('Failed to connect to server');
-      console.error('Error creating list:', err);
-    } finally {
-      setListSubmitting(false);
-    }
-  };
-
-  const handleListClick = (list) => {
-    setSelectedList(list);
-  };
-
-  const handleEditList = (e, list) => {
-    e.stopPropagation();
-    setEditingList(list);
-    setListName(list.name);
-    setListDescription(list.description || '');
-    setListFormError(null);
-    setShowEditListDialog(true);
-  };
-
-  const handleCloseEditListDialog = () => {
-    setShowEditListDialog(false);
-    setEditingList(null);
-    setListFormError(null);
-    setListName('');
-    setListDescription('');
-  };
-
-  const handleUpdateList = async (e) => {
-    e.preventDefault();
-    
-    if (!listName.trim()) {
-      setListFormError('List name is required');
-      return;
-    }
-
-    try {
-      setListSubmitting(true);
-      setListFormError(null);
-      
-      const response = await listAPI.updateList(editingList.id, {
-        name: listName.trim(),
-        description: listDescription.trim(),
-      });
-
-      if (response.ok) {
-        // Success - close dialog and refresh lists
-        handleCloseEditListDialog();
-        await fetchLists();
-      } else {
-        const errorData = await response.json().catch(() => ({}));
-        setListFormError(errorData.message || 'Failed to update list');
-      }
-    } catch (err) {
-      setListFormError('Failed to connect to server');
-      console.error('Error updating list:', err);
-    } finally {
-      setListSubmitting(false);
-    }
-  };
-
-  const handleDeleteListClick = (e, list) => {
-    e.stopPropagation();
-    setDeletingList(list);
-    setDeleteMessage('');
-    setShowDeleteConfirm(true);
-  };
-
-  const handleCloseDeleteConfirm = () => {
-    setShowDeleteConfirm(false);
-    setDeletingList(null);
-    setDeleteMessage('');
-  };
-
-  const handleDeleteList = async () => {
-    try {
-      setListSubmitting(true);
-      setDeleteMessage('');
-      
-      const response = await listAPI.deleteList(deletingList.id);
-
-      if (response.ok) {
-        // Success - show message, close dialog and refresh lists
-        setDeleteMessage('The list is deleted');
-        setTimeout(async () => {
-          handleCloseDeleteConfirm();
-          // If deleted list was selected, clear selection
-          if (selectedList?.id === deletingList.id) {
-            setSelectedList(null);
-            setTasks([]);
-          }
-          await fetchLists();
-        }, 1500);
-      } else {
-        const errorData = await response.json().catch(() => ({}));
-        setDeleteMessage(errorData.message || 'Failed to delete list');
-      }
-    } catch (err) {
-      setDeleteMessage('Failed to connect to server');
-      console.error('Error deleting list:', err);
-    } finally {
-      setListSubmitting(false);
-    }
-  };
-
-  const handleCreateTask = () => {
-    if (!selectedList) {
-      return;
-    }
-    setShowTaskDialog(true);
-    setTaskFormError(null);
+  const handleCreateTask = (status = 'CREATED') => {
+    setEditingTask(null);
     setTaskTitle('');
     setTaskDescription('');
     setTaskDueDate('');
-    setTaskReminderDate('');
     setTaskPriority('MEDIUM');
+    setTaskStatus(status);
+    setTaskFormError(null);
+    setShowTaskDialog(true);
+  };
+
+  const handleEditTask = (task) => {
+    setEditingTask(task);
+    setTaskTitle(task.title);
+    setTaskDescription(task.description || '');
+    setTaskDueDate(task.dueDate || '');
+    setTaskPriority(task.priority || 'MEDIUM');
+    setTaskStatus(task.status);
+    setTaskFormError(null);
+    setShowTaskDialog(true);
   };
 
   const handleCloseTaskDialog = () => {
     setShowTaskDialog(false);
     setTaskFormError(null);
-    setTaskTitle('');
-    setTaskDescription('');
-    setTaskDueDate('');
-    setTaskReminderDate('');
-    setTaskPriority('MEDIUM');
+    setEditingTask(null);
   };
 
   const handleSubmitTask = async (e) => {
     e.preventDefault();
-    
+
     if (!taskTitle.trim()) {
       setTaskFormError('Task title is required');
+      return;
+    }
+
+    if (!selectedList) {
+      setTaskFormError('No list selected');
       return;
     }
 
     try {
       setTaskSubmitting(true);
       setTaskFormError(null);
-      
+
       const taskData = {
         title: taskTitle.trim(),
         description: taskDescription.trim(),
+        dueDate: taskDueDate || null,
         priority: taskPriority,
+        status: taskStatus,
       };
 
-      // Add dates only if they are provided
-      if (taskDueDate) {
-        taskData.due_date = taskDueDate;
+      let response;
+      if (editingTask) {
+        response = await taskAPI.updateTask(editingTask.id, taskData);
+      } else {
+        response = await taskAPI.createTask(selectedList.id, taskData);
       }
-      if (taskReminderDate) {
-        taskData.reminder_date = taskReminderDate;
-      }
-      
-      const response = await taskAPI.createTask(selectedList.id, taskData);
 
-      if (response.status === 201) {
-        // Success - close dialog and refresh tasks
+      if (response.ok || response.status === 201) {
         handleCloseTaskDialog();
         await fetchTasks(selectedList.id);
       } else {
         const errorData = await response.json().catch(() => ({}));
-        setTaskFormError(errorData.message || 'Failed to create task');
+        setTaskFormError(errorData.message || 'Failed to save task');
       }
     } catch (err) {
       setTaskFormError('Failed to connect to server');
-      console.error('Error creating task:', err);
     } finally {
       setTaskSubmitting(false);
     }
   };
 
-  // Drag and Drop Handlers for Kanban
+  const handleDeleteTask = async (taskId) => {
+    setConfirmMessage('Are you sure you want to delete this task?');
+    setConfirmAction(() => async () => {
+      try {
+        const response = await taskAPI.deleteTask(taskId);
+        if (response.ok) {
+          await fetchTasks(selectedList.id);
+        }
+      } catch (err) {
+        console.error('Error deleting task:', err);
+      }
+    });
+    setShowConfirmDialog(true);
+  };
+
+  const handleCreateList = () => {
+    setEditingList(null);
+    setListName('');
+    setListDescription('');
+    setListFormError(null);
+    setShowListDialog(true);
+  };
+
+  const handleEditList = (list, e) => {
+    e.stopPropagation();
+    setEditingList(list);
+    setListName(list.name);
+    setListDescription(list.description || '');
+    setListFormError(null);
+    setShowListDialog(true);
+  };
+
+  const handleCloseListDialog = () => {
+    setShowListDialog(false);
+    setListFormError(null);
+    setEditingList(null);
+  };
+
+  const handleSubmitList = async (e) => {
+    e.preventDefault();
+
+    if (!listName.trim()) {
+      setListFormError('List name is required');
+      return;
+    }
+
+    try {
+      setListSubmitting(true);
+      setListFormError(null);
+
+      const listData = {
+        name: listName.trim(),
+        description: listDescription.trim()
+      };
+
+      let response;
+      if (editingList) {
+        response = await listAPI.updateList(editingList.id, listData);
+      } else {
+        response = await listAPI.createList(project.id, listData);
+      }
+
+      if (response.ok || response.status === 201) {
+        handleCloseListDialog();
+        await fetchLists();
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        setListFormError(errorData.message || 'Failed to save list');
+      }
+    } catch (err) {
+      setListFormError('Failed to connect to server');
+    } finally {
+      setListSubmitting(false);
+    }
+  };
+
+  const handleDeleteList = async (listId, e) => {
+    e.stopPropagation();
+
+    setConfirmMessage('Are you sure you want to delete this list? All tasks in this list will also be deleted.');
+    setConfirmAction(() => async () => {
+      try {
+        const response = await listAPI.deleteList(listId);
+        if (response.ok || response.status === 204) {
+          if (selectedList?.id === listId) {
+            setSelectedList(null);
+            setTasks([]);
+          }
+          await fetchLists();
+        }
+      } catch (err) {
+        console.error('Error deleting list:', err);
+      }
+    });
+    setShowConfirmDialog(true);
+  };
+
   const handleDragStart = (e, task) => {
     setDraggedTask(task);
     e.dataTransfer.effectAllowed = 'move';
@@ -361,22 +320,17 @@ function Tasks() {
 
   const handleDrop = async (e, newStatus) => {
     e.preventDefault();
-    
-    if (!draggedTask || draggedTask.status === newStatus) {
-      setDraggedTask(null);
-      return;
-    }
+
+    if (!draggedTask) return;
 
     try {
       const response = await taskAPI.updateTask(draggedTask.id, {
+        ...draggedTask,
         status: newStatus,
       });
 
       if (response.ok) {
-        // Refresh tasks to show updated status
         await fetchTasks(selectedList.id);
-      } else {
-        console.error('Failed to update task status');
       }
     } catch (err) {
       console.error('Error updating task status:', err);
@@ -386,693 +340,466 @@ function Tasks() {
   };
 
   const getTasksByStatus = (status) => {
-    return tasks
-      .filter(task => task.status === status)
-      .sort((a, b) => {
-        // Sort by created date in descending order (most recent first)
-        const dateA = new Date(a.createdDate || 0);
-        const dateB = new Date(b.createdDate || 0);
-        return dateB - dateA;
-      });
+    return tasks.filter(task => {
+      const matchesStatus = task.status === status;
+      const matchesSearch = !searchQuery ||
+        task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (task.description && task.description.toLowerCase().includes(searchQuery.toLowerCase()));
+      return matchesStatus && matchesSearch;
+    });
   };
 
-  const handleEditTask = (task) => {
-    setEditingTask(task);
-    setTaskTitle(task.title || '');
-    setTaskDescription(task.description || '');
-    setTaskDueDate(task.dueDate || '');
-    setTaskReminderDate(task.reminderDate || '');
-    setTaskPriority(task.priority || 'MEDIUM');
-    setEditTaskStatus(task.status || 'CREATED');
-    setTaskFormError(null);
-    setShowEditTaskDialog(true);
+  const formatDate = (dateString) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
 
-  const handleCloseEditTaskDialog = () => {
-    setShowEditTaskDialog(false);
-    setEditingTask(null);
-    setTaskFormError(null);
-    setTaskTitle('');
-    setTaskDescription('');
-    setTaskDueDate('');
-    setTaskReminderDate('');
-    setTaskPriority('MEDIUM');
-    setEditTaskStatus('CREATED');
+  const getPriorityColor = (priority) => {
+    const colors = {
+      'VERY_HIGH': 'error',
+      'HIGH': 'primary',
+      'MEDIUM': 'tertiary',
+      'LOW': 'secondary'
+    };
+    return colors[priority] || 'secondary';
   };
 
-  const handleUpdateTask = async (e) => {
-    e.preventDefault();
-
-    if (!taskTitle.trim()) {
-      setTaskFormError('Task title is required');
-      return;
-    }
-
-    try {
-      setTaskSubmitting(true);
-      setTaskFormError(null);
-
-      const taskData = {
-        title: taskTitle.trim(),
-        description: taskDescription.trim(),
-        priority: taskPriority,
-        status: editTaskStatus,
-      };
-
-      // Add dates only if they are provided
-      if (taskDueDate) {
-        taskData.dueDate = taskDueDate;
-      }
-      if (taskReminderDate) {
-        taskData.reminderDate = taskReminderDate;
-      }
-
-      // If status is being set to COMPLETED, add completion date
-      if (editTaskStatus === 'COMPLETED' && editingTask.status !== 'COMPLETED') {
-        taskData.completedDate = new Date().toISOString();
-      }
-      // If status is being changed from COMPLETED to something else, clear completion date
-      if (editTaskStatus !== 'COMPLETED' && editingTask.status === 'COMPLETED') {
-        taskData.completedDate = null;
-      }
-
-      const response = await taskAPI.updateTask(editingTask.id, taskData);
-
-      if (response.ok) {
-        // Success - close dialog and refresh tasks
-        handleCloseEditTaskDialog();
-        await fetchTasks(selectedList.id);
-      } else {
-        const errorData = await response.json().catch(() => ({}));
-        setTaskFormError(errorData.message || 'Failed to update task');
-      }
-    } catch (err) {
-      setTaskFormError('Failed to connect to server');
-      console.error('Error updating task:', err);
-    } finally {
-      setTaskSubmitting(false);
-    }
+  const toggleGroup = (status) => {
+    setCollapsedGroups(prev => ({
+      ...prev,
+      [status]: !prev[status]
+    }));
   };
 
-  const handleDeleteTaskClick = (e, task) => {
-    if (e) e.stopPropagation();
-    setDeletingTask(task);
-    setDeleteTaskMessage('');
-    setShowDeleteTaskConfirm(true);
+  const getTasksByStatusGrouped = () => {
+    const filteredTasks = tasks.filter(task => {
+      const matchesCompleted = hideCompleted ? task.status !== 'COMPLETED' : true;
+      const matchesSearch = !searchQuery ||
+        task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (task.description && task.description.toLowerCase().includes(searchQuery.toLowerCase()));
+      return matchesCompleted && matchesSearch;
+    });
+
+    const grouped = {};
+    columns.forEach(column => {
+      grouped[column.id] = filteredTasks.filter(task => task.status === column.id);
+    });
+
+    return grouped;
   };
 
-  const handleCloseDeleteTaskConfirm = () => {
-    setShowDeleteTaskConfirm(false);
-    setDeletingTask(null);
-    setDeleteTaskMessage('');
-  };
-
-  const handleDeleteTask = async () => {
-    try {
-      setTaskDeleting(true);
-      setDeleteTaskMessage('');
-
-      const response = await taskAPI.deleteTask(deletingTask.id);
-
-      if (response.ok) {
-        setDeleteTaskMessage('The task is deleted');
-        setTimeout(async () => {
-          handleCloseDeleteTaskConfirm();
-          await fetchTasks(selectedList.id);
-        }, 1500);
-      } else {
-        const errorData = await response.json().catch(() => ({}));
-        setDeleteTaskMessage(errorData.message || 'Failed to delete task');
-      }
-    } catch (err) {
-      setDeleteTaskMessage('Failed to connect to server');
-      console.error('Error deleting task:', err);
-    } finally {
-      setTaskDeleting(false);
-    }
-  };
-
-  const handleSetToCompleted = async (task) => {
-    try {
-      const response = await taskAPI.updateTask(task.id, {
-        status: 'COMPLETED',
-        completedDate: new Date().toISOString(),
-      });
-
-      if (response.ok) {
-        // Refresh tasks to show updated status
-        await fetchTasks(selectedList.id);
-      } else {
-        console.error('Failed to update task status');
-      }
-    } catch (err) {
-      console.error('Error updating task status:', err);
-    }
-  };
-
-  const handleSetToInProgress = async (task) => {
-    try {
-      const response = await taskAPI.updateTask(task.id, {
-        status: 'IN_PROGRESS',
-      });
-
-      if (response.ok) {
-        // Refresh tasks to show updated status
-        await fetchTasks(selectedList.id);
-      } else {
-        console.error('Failed to update task status');
-      }
-    } catch (err) {
-      console.error('Error updating task status:', err);
-    }
-  };
-
-  const handleReopenTask = async (task) => {
-    try {
-      const response = await taskAPI.updateTask(task.id, {
-        status: 'CREATED',
-        completedDate: null,
-      });
-
-      if (response.ok) {
-        // Refresh tasks to show updated status
-        await fetchTasks(selectedList.id);
-      } else {
-        console.error('Failed to update task status');
-      }
-    } catch (err) {
-      console.error('Error updating task status:', err);
-    }
-  };
-
-  // Get user initials for icon
   const getUserInitials = () => {
-    if (user.name) {
+    if (user?.name) {
       const names = user.name.split(' ');
       if (names.length >= 2) {
         return (names[0][0] + names[names.length - 1][0]).toUpperCase();
       }
       return user.name.substring(0, 2).toUpperCase();
     }
-    return user.username?.substring(0, 2).toUpperCase() || 'U';
+    return user?.username?.substring(0, 2).toUpperCase() || 'U';
   };
 
-  // Render user icon with profile picture or initials
   const renderUserIcon = () => {
-    if (user.pictureUrl) {
-      return (
-        <img
-          src={user.pictureUrl}
-          alt={user.name || user.username}
-          className="user-icon-image"
-        />
-      );
+    if (user?.pictureUrl) {
+      return <img src={user.pictureUrl} alt={user.name || user.username} className="user-avatar-img" />;
     }
     return getUserInitials();
   };
 
-  if (!project || !user) {
-    return null;
-  }
+  if (!project || !user) return null;
+
+  const columns = [
+    { id: 'CREATED', title: 'To Do', color: 'outline', dotColor: '#6d758c' },
+    { id: 'IN_PROGRESS', title: 'In Progress', color: 'primary', dotColor: '#9fa7ff' },
+    { id: 'BLOCKED', title: 'Blocked', color: 'error', dotColor: '#ff6e84' },
+    { id: 'COMPLETED', title: 'Done', color: 'tertiary', dotColor: '#47c4ff' }
+  ];
 
   return (
-    <div className="tasks-container">
-      {/* Top Navigation Bar */}
-      <nav className="navbar">
-        <div className="navbar-left">
-          <button 
-            className="back-button"
-            onClick={handleBackToProjects}
-            title="Back to Projects"
-          >
-            ←
-          </button>
-          <div className="navbar-logo">{project.name}</div>
-        </div>
-        <div className="user-menu">
-          <div
-            className="user-icon"
-            onClick={() => setShowDropdown(!showDropdown)}
-            title={user.name || user.username}
-          >
-            {renderUserIcon()}
+    <div className="tasks-wrapper" data-theme={isDarkMode ? 'dark' : 'light'}>
+      {/* Sidebar */}
+      <aside className={`pensieve-sidebar ${isSidebarCollapsed ? 'collapsed' : ''}`}>
+        <div className="sidebar-header">
+          <div className="sidebar-brand">
+            <div className="brand-icon">
+              <span className="material-symbols-outlined">memory</span>
+            </div>
+            <span className="brand-text">Pensieve</span>
           </div>
-          {showDropdown && (
-            <div className="dropdown-menu">
-              <button 
-                className="dropdown-item" 
-                onClick={handleEditProfile}
+          <button className="sidebar-toggle" onClick={toggleSidebar} aria-label="Toggle sidebar">
+            <span className="material-symbols-outlined">
+              {isSidebarCollapsed ? 'chevron_right' : 'chevron_left'}
+            </span>
+          </button>
+        </div>
+
+        <div className="workspace-section">
+          <h2 className="workspace-title">{project.name}</h2>
+          <p className="workspace-subtitle">Project Lists</p>
+        </div>
+
+        <nav className="sidebar-nav">
+          <div className="nav-item" onClick={handleBackToProjects}>
+            <span className="material-symbols-outlined">arrow_back</span>
+            <span className="nav-item-text">Back to Projects</span>
+          </div>
+
+          <div className="nav-item add-list-item" onClick={handleCreateList}>
+            <span className="material-symbols-outlined">add</span>
+            <span className="nav-item-text">Add List</span>
+          </div>
+
+          {loadingLists ? (
+            <div className="nav-item">
+              <span className="material-symbols-outlined">hourglass_empty</span>
+              <span className="nav-item-text">Loading...</span>
+            </div>
+          ) : lists.length === 0 ? (
+            <div className="nav-item">
+              <span className="material-symbols-outlined">inbox</span>
+              <span className="nav-item-text">No lists</span>
+            </div>
+          ) : (
+            lists.map(list => (
+              <div
+                key={list.id}
+                className={`nav-item list-item-with-actions ${selectedList?.id === list.id ? 'active' : ''}`}
+                onClick={() => setSelectedList(list)}
               >
-                Edit Profile
-              </button>
-              <button 
-                className="dropdown-item" 
-                onClick={handleLogout}
-              >
-                Logout
+                <span className="material-symbols-outlined">
+                  {selectedList?.id === list.id ? 'check_box' : 'list'}
+                </span>
+                <span className="nav-item-text">{list.name}</span>
+                <div className="list-item-actions">
+                  <button
+                    className="list-item-action-btn"
+                    onClick={(e) => handleEditList(list, e)}
+                    title="Edit list"
+                  >
+                    <span className="material-symbols-outlined">edit</span>
+                  </button>
+                  <button
+                    className="list-item-action-btn delete"
+                    onClick={(e) => handleDeleteList(list.id, e)}
+                    title="Delete list"
+                  >
+                    <span className="material-symbols-outlined">delete</span>
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
+        </nav>
+      </aside>
+
+      {/* Main Content */}
+      <main className={`pensieve-main ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
+        {/* Top Header */}
+        <Header
+          isDarkMode={isDarkMode}
+          toggleTheme={toggleTheme}
+          renderUserIcon={renderUserIcon}
+          searchPlaceholder="Search tasks..."
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+        />
+
+        {/* Board Container */}
+        <div className="board-container">
+          {/* Board Header */}
+          <header className="board-header">
+            <div className="board-info">
+              <h1 className="board-title">{selectedList ? selectedList.name : project.name}</h1>
+              <p className="board-description">
+                {selectedList ? `Tasks for ${selectedList.name}` : project.description || 'Project task management board'}
+              </p>
+            </div>
+            <div className="board-meta">
+              <div className="view-toggle-group">
+                <button
+                  className={`view-toggle-btn ${viewMode === 'kanban' ? 'active' : ''}`}
+                  onClick={() => setViewMode('kanban')}
+                  title="Kanban view"
+                >
+                  <span className="material-symbols-outlined">view_column</span>
+                </button>
+                <button
+                  className={`view-toggle-btn ${viewMode === 'list' ? 'active' : ''}`}
+                  onClick={() => setViewMode('list')}
+                  title="List view"
+                >
+                  <span className="material-symbols-outlined">view_list</span>
+                </button>
+              </div>
+              {viewMode === 'list' && (
+                <div className="hide-completed-toggle">
+                  <label className="toggle-label">
+                    <input
+                      type="checkbox"
+                      checked={hideCompleted}
+                      onChange={(e) => setHideCompleted(e.target.checked)}
+                      className="toggle-checkbox"
+                    />
+                    <span className="toggle-slider"></span>
+                    <span className="toggle-text">Hide completed</span>
+                  </label>
+                </div>
+              )}
+              <button className="add-member-btn" onClick={() => handleCreateTask()} title="Add task">
+                <span className="material-symbols-outlined">add</span>
               </button>
             </div>
-          )}
-        </div>
-      </nav>
+          </header>
 
-      {/* Main Content with Sidebar */}
-      <div className="tasks-main">
-        {/* Sidebar with Lists */}
-        <aside className="sidebar">
-          <div className="sidebar-header">
-            <h3>Lists</h3>
-            <button 
-              className="add-list-btn"
-              onClick={handleCreateList}
-              title="Add List"
-            >
-              +
-            </button>
-          </div>
-          
-          <div className="sidebar-content">
-            {loadingLists && (
-              <div className="sidebar-loading">Loading...</div>
-            )}
-            
-            {!loadingLists && lists.length === 0 && (
-              <div className="no-lists">
-                Create a new list to get started
+          {/* Kanban Board */}
+          {viewMode === 'kanban' ? (
+            loadingLists || loadingTasks ? (
+              <div className="loading-state">
+                <div className="loading-spinner"></div>
               </div>
-            )}
-            
-            {!loadingLists && lists.length > 0 && (
-              <ul className="lists">
-                {lists.map((list) => (
-                  <li 
-                    key={list.id}
-                    className={`list-item ${selectedList?.id === list.id ? 'active' : ''}`}
-                    onClick={() => handleListClick(list)}
+            ) : error ? (
+              <div className="error-state">{error}</div>
+            ) : (
+              <div className="kanban-grid">
+              {columns.map(column => {
+                const columnTasks = getTasksByStatus(column.id);
+                return (
+                  <div
+                    key={column.id}
+                    className="kanban-column"
+                    onDragOver={handleDragOver}
+                    onDrop={(e) => handleDrop(e, column.id)}
                   >
-                    <span className="list-name">{list.name}</span>
-                    <div className="list-actions">
-                      <button 
-                        className="list-action-btn edit-btn"
-                        onClick={(e) => handleEditList(e, list)}
-                        title="Edit List"
+                    <div className="column-header">
+                      <div className="column-title-group">
+                        <span className="column-dot" style={{ backgroundColor: column.dotColor }}></span>
+                        <h3 className="column-title">{column.title}</h3>
+                        <span className="column-count">{columnTasks.length}</span>
+                      </div>
+                      <button
+                        className="column-menu-btn"
+                        onClick={() => handleCreateTask(column.id)}
+                        title="Add task"
                       >
-                        ✏️
-                      </button>
-                      <button 
-                        className="list-action-btn delete-btn"
-                        onClick={(e) => handleDeleteListClick(e, list)}
-                        title="Delete List"
-                      >
-                        🗑️
+                        <span className="material-symbols-outlined">add</span>
                       </button>
                     </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </aside>
 
-        {/* Tasks Content Area */}
-        <main className="tasks-content">
-          {error && <div className="error-message">{error}</div>}
-          
-          {!error && selectedList && (
-            <>
-              <div className="tasks-header">
-                <h2>{selectedList.name}</h2>
-                <div className="view-toggle">
-                  <button 
-                    className={`view-btn ${viewMode === 'list' ? 'active' : ''}`}
-                    onClick={() => setViewMode('list')}
-                  >
-                    List View
-                  </button>
-                  <button 
-                    className={`view-btn ${viewMode === 'kanban' ? 'active' : ''}`}
-                    onClick={() => setViewMode('kanban')}
-                  >
-                    Kanban Board
-                  </button>
-                </div>
-              </div>
-              
-              {loadingTasks && (
-                <div className="loading">Loading tasks...</div>
-              )}
-              
-              {!loadingTasks && tasks.length === 0 && (
-                <div className="no-tasks">
-                  No tasks are present for this list
-                </div>
-              )}
-              
-              {!loadingTasks && tasks.length > 0 && viewMode === 'list' && (
-                <div className="tasks-list">
-                  {tasks.map((task) => (
-                    <div key={task.id} className="task-item">
-                      <div className="task-content">
-                        <div className="task-title">{task.title}</div>
-                        {task.status && (
-                          <div className="task-status">Status: {task.status}</div>
-                        )}
-                      </div>
-                      <div className="task-actions">
-                        {task.status === 'CREATED' && (
-                          <button
-                            className="task-action-btn start-task-btn"
-                            onClick={() => handleSetToInProgress(task)}
-                            title="Set to In Progress"
-                          >
-                            ▶ Start
-                          </button>
-                        )}
-                        {task.status === 'IN_PROGRESS' && (
-                          <button
-                            className="task-action-btn complete-task-btn"
-                            onClick={() => handleSetToCompleted(task)}
-                            title="Set to Completed"
-                          >
-                            ✓ Complete
-                          </button>
-                        )}
-                        {task.status === 'COMPLETED' && (
-                          <button
-                            className="task-action-btn reopen-task-btn"
-                            onClick={() => handleReopenTask(task)}
-                            title="Reopen Task"
-                          >
-                            ↺ Reopen
-                          </button>
-                        )}
-                        <button
-                          className="task-action-btn edit-task-btn"
-                          onClick={() => handleEditTask(task)}
-                          title="Edit Task"
-                        >
-                          ✏️
-                        </button>
-                        <button
-                          className="task-action-btn delete-task-btn"
-                          onClick={(e) => handleDeleteTaskClick(e, task)}
-                          title="Delete Task"
-                        >
-                          🗑️
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {!loadingTasks && viewMode === 'kanban' && (
-                <div className="kanban-board">
-                  {['CREATED', 'IN_PROGRESS', 'BLOCKED', 'COMPLETED'].map((status) => (
-                    <div 
-                      key={status}
-                      className="kanban-column"
-                      onDragOver={handleDragOver}
-                      onDrop={(e) => handleDrop(e, status)}
-                    >
-                      <div className="kanban-column-header">
-                        <h3>{status.replace('_', ' ')}</h3>
-                        <span className="task-count">{getTasksByStatus(status).length}</span>
-                      </div>
-                      <div className="kanban-column-content">
-                        {getTasksByStatus(status).map((task) => (
+                    <div className="task-cards">
+                      {columnTasks.length === 0 ? (
+                        <div className="empty-state">
+                          <span className="material-symbols-outlined">inbox</span>
+                          <p>No tasks</p>
+                        </div>
+                      ) : (
+                        columnTasks.map(task => (
                           <div
                             key={task.id}
-                            className="kanban-task-card"
+                            className={`task-card ${column.id === 'COMPLETED' ? 'completed' : ''} ${column.id === 'IN_PROGRESS' ? 'in-progress' : ''} ${column.id === 'BLOCKED' ? 'blocked' : ''}`}
                             draggable
                             onDragStart={(e) => handleDragStart(e, task)}
+                            onClick={() => handleEditTask(task)}
                           >
-                            <div className="kanban-card-header">
-                              <div className="kanban-task-title">{task.title}</div>
-                              <div className="kanban-task-actions">
-                                <button 
-                                  className="kanban-action-btn edit-task-btn"
-                                  onClick={() => handleEditTask(task)}
-                                  title="Edit Task"
+                            <div className="task-tags">
+                              <span className={`task-tag priority-${task.priority?.toLowerCase()}`}>
+                                {task.priority?.replace('_', ' ')}
+                              </span>
+                            </div>
+
+                            <h4 className="task-title">
+                              {task.title}
+                            </h4>
+
+                            {column.id === 'IN_PROGRESS' && (
+                              <div className="task-progress">
+                                <div className="progress-bar-container">
+                                  <div className="progress-bar">
+                                    <div className="progress-fill" style={{ width: '66%' }}></div>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+
+                            <div className="task-footer">
+                              <div className="task-meta">
+                                {task.dueDate && (
+                                  <div className="task-date">
+                                    <span className="material-symbols-outlined">calendar_today</span>
+                                    <span>{formatDate(task.dueDate)}</span>
+                                  </div>
+                                )}
+                                {column.id === 'COMPLETED' && (
+                                  <div className="task-completed-badge">
+                                    <span className="material-symbols-outlined">check_circle</span>
+                                    <span>Completed</span>
+                                  </div>
+                                )}
+                              </div>
+                              <div className="task-card-actions">
+                                <button
+                                  className="task-card-action-btn"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleEditTask(task);
+                                  }}
+                                  title="Edit task"
                                 >
-                                  ✏️
+                                  <span className="material-symbols-outlined">edit</span>
                                 </button>
-                                <button 
-                                  className="kanban-action-btn delete-task-btn"
-                                  onClick={(e) => handleDeleteTaskClick(e, task)}
-                                  title="Delete Task"
+                                <button
+                                  className="task-card-action-btn delete"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteTask(task.id);
+                                  }}
+                                  title="Delete task"
                                 >
-                                  🗑️
+                                  <span className="material-symbols-outlined">delete</span>
                                 </button>
                               </div>
                             </div>
-                            {task.priority && (
-                              <div className={`kanban-task-priority priority-${task.priority.toLowerCase()}`}>
-                                {task.priority}
-                              </div>
-                            )}
-                            {task.due_date && (
-                              <div className="kanban-task-due">Due: {task.due_date}</div>
-                            )}
                           </div>
-                        ))}
-                        {getTasksByStatus(status).length === 0 && (
-                          <div className="kanban-empty">No tasks</div>
-                        )}
-                      </div>
+                        ))
+                      )}
                     </div>
-                  ))}
+                  </div>
+                );
+              })}
+            </div>
+            )
+          ) : (
+            /* List View */
+            <div className="list-view">
+              {loadingLists || loadingTasks ? (
+                <div className="loading-state">
+                  <div className="loading-spinner"></div>
                 </div>
-              )}
-            </>
+              ) : error ? (
+                <div className="error-state">{error}</div>
+              ) : (() => {
+                const groupedTasks = getTasksByStatusGrouped();
+                const totalTasks = Object.values(groupedTasks).reduce((sum, tasks) => sum + tasks.length, 0);
+
+                return totalTasks === 0 ? (
+                  <div className="empty-state">
+                    <span className="material-symbols-outlined">inbox</span>
+                    <p>{hideCompleted ? 'No active tasks' : 'No tasks in this list'}</p>
+                  </div>
+                ) : (
+                  <div className="list-view-grouped">
+                    {columns.map(column => {
+                      const columnTasks = groupedTasks[column.id];
+                      if (columnTasks.length === 0) return null;
+
+                      const isCollapsed = collapsedGroups[column.id];
+
+                      return (
+                        <div key={column.id} className="task-group">
+                          <div className="task-group-header" onClick={() => toggleGroup(column.id)}>
+                            <div className="task-group-title-section">
+                              <span className="material-symbols-outlined collapse-icon">
+                                {isCollapsed ? 'chevron_right' : 'expand_more'}
+                              </span>
+                              <span className="group-status-dot" style={{ backgroundColor: column.dotColor }}></span>
+                              <h3 className="task-group-title">{column.title}</h3>
+                              <span className="task-group-count">{columnTasks.length}</span>
+                            </div>
+                            <button
+                              className="group-add-btn"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleCreateTask(column.id);
+                              }}
+                              title="Add task to this group"
+                            >
+                              <span className="material-symbols-outlined">add</span>
+                            </button>
+                          </div>
+
+                          {!isCollapsed && (
+                            <div className="task-group-content">
+                              {columnTasks.map(task => (
+                                <div key={task.id} className="list-task-row" onClick={() => handleEditTask(task)}>
+                                  <div className="list-task-main">
+                                    <div className="list-task-checkbox">
+                                      <div className={`task-checkbox ${task.status === 'COMPLETED' ? 'checked' : ''}`}>
+                                        {task.status === 'COMPLETED' && (
+                                          <span className="material-symbols-outlined">check</span>
+                                        )}
+                                      </div>
+                                    </div>
+                                    <div className="list-task-info">
+                                      <h4 className={`list-task-title ${task.status === 'COMPLETED' ? 'completed' : ''}`}>
+                                        {task.title}
+                                      </h4>
+                                      {task.description && (
+                                        <p className="list-task-description">{task.description}</p>
+                                      )}
+                                      <div className="list-task-meta">
+                                        <span className={`priority-badge-small priority-${task.priority?.toLowerCase()}`}>
+                                          {task.priority?.replace('_', ' ')}
+                                        </span>
+                                        {task.dueDate && (
+                                          <div className="due-date-small">
+                                            <span className="material-symbols-outlined">calendar_today</span>
+                                            <span>{formatDate(task.dueDate)}</span>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <div className="list-task-actions">
+                                    <button
+                                      className="list-action-btn"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleEditTask(task);
+                                      }}
+                                      title="Edit task"
+                                    >
+                                      <span className="material-symbols-outlined">edit</span>
+                                    </button>
+                                    <button
+                                      className="list-action-btn delete"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleDeleteTask(task.id);
+                                      }}
+                                      title="Delete task"
+                                    >
+                                      <span className="material-symbols-outlined">delete</span>
+                                    </button>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+            </div>
           )}
-          
-          {!error && !selectedList && !loadingLists && (
-            <div className="no-selection">
-              Select a list to view tasks
-            </div>
-          )}
-        </main>
-      </div>
-
-      {/* Create List Dialog */}
-      {showListDialog && (
-        <div className="dialog-overlay" onClick={handleCloseListDialog}>
-          <div className="dialog" onClick={(e) => e.stopPropagation()}>
-            <div className="dialog-header">
-              <h2>Create New List</h2>
-              <button 
-                className="dialog-close"
-                onClick={handleCloseListDialog}
-                type="button"
-              >
-                ×
-              </button>
-            </div>
-            
-            <form onSubmit={handleSubmitList}>
-              <div className="form-group">
-                <label htmlFor="list-name">List Name *</label>
-                <input
-                  id="list-name"
-                  type="text"
-                  className="form-input"
-                  value={listName}
-                  onChange={(e) => setListName(e.target.value)}
-                  placeholder="Enter list name"
-                  disabled={listSubmitting}
-                  autoFocus
-                />
-              </div>
-              
-              <div className="form-group">
-                <label htmlFor="list-description">Description</label>
-                <textarea
-                  id="list-description"
-                  className="form-textarea"
-                  value={listDescription}
-                  onChange={(e) => setListDescription(e.target.value)}
-                  placeholder="Enter list description (optional)"
-                  rows="4"
-                  disabled={listSubmitting}
-                />
-              </div>
-              
-              {listFormError && (
-                <div className="form-error">{listFormError}</div>
-              )}
-              
-              <div className="dialog-actions">
-                <button 
-                  type="button"
-                  className="btn-cancel"
-                  onClick={handleCloseListDialog}
-                  disabled={listSubmitting}
-                >
-                  Cancel
-                </button>
-                <button 
-                  type="submit"
-                  className="btn-submit"
-                  disabled={listSubmitting}
-                >
-                  {listSubmitting ? 'Creating...' : 'Create List'}
-                </button>
-              </div>
-            </form>
-          </div>
         </div>
-      )}
+      </main>
 
-      {/* Edit List Dialog */}
-      {showEditListDialog && (
-        <div className="dialog-overlay" onClick={handleCloseEditListDialog}>
-          <div className="dialog" onClick={(e) => e.stopPropagation()}>
-            <div className="dialog-header">
-              <h2>Edit List</h2>
-              <button 
-                className="dialog-close"
-                onClick={handleCloseEditListDialog}
-                type="button"
-              >
-                ×
-              </button>
-            </div>
-            
-            <form onSubmit={handleUpdateList}>
-              <div className="form-group">
-                <label htmlFor="edit-list-name">List Name *</label>
-                <input
-                  id="edit-list-name"
-                  type="text"
-                  className="form-input"
-                  value={listName}
-                  onChange={(e) => setListName(e.target.value)}
-                  placeholder="Enter list name"
-                  disabled={listSubmitting}
-                  autoFocus
-                />
-              </div>
-              
-              <div className="form-group">
-                <label htmlFor="edit-list-description">Description</label>
-                <textarea
-                  id="edit-list-description"
-                  className="form-textarea"
-                  value={listDescription}
-                  onChange={(e) => setListDescription(e.target.value)}
-                  placeholder="Enter list description (optional)"
-                  rows="4"
-                  disabled={listSubmitting}
-                />
-              </div>
-              
-              {listFormError && (
-                <div className="form-error">{listFormError}</div>
-              )}
-              
-              <div className="dialog-actions">
-                <button 
-                  type="button"
-                  className="btn-cancel"
-                  onClick={handleCloseEditListDialog}
-                  disabled={listSubmitting}
-                >
-                  Cancel
-                </button>
-                <button 
-                  type="submit"
-                  className="btn-submit"
-                  disabled={listSubmitting}
-                >
-                  {listSubmitting ? 'Updating...' : 'Update List'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Delete Confirmation Dialog */}
-      {showDeleteConfirm && (
-        <div className="dialog-overlay" onClick={handleCloseDeleteConfirm}>
-          <div className="dialog confirm-dialog" onClick={(e) => e.stopPropagation()}>
-            <div className="dialog-header">
-              <h2>Delete List</h2>
-              <button 
-                className="dialog-close"
-                onClick={handleCloseDeleteConfirm}
-                type="button"
-              >
-                ×
-              </button>
-            </div>
-            
-            <div className="dialog-body">
-              <p className="warning-message">
-                Are you sure you want to delete this list?
-              </p>
-              
-              {deleteMessage && (
-                <div className={deleteMessage.includes('deleted') ? 'success-message' : 'form-error'}>
-                  {deleteMessage}
-                </div>
-              )}
-            </div>
-            
-            <div className="dialog-actions dialog-actions-spaced">
-              <button 
-                type="button"
-                className="btn-cancel"
-                onClick={handleCloseDeleteConfirm}
-                disabled={listSubmitting}
-              >
-                Cancel
-              </button>
-              <button 
-                type="button"
-                className="btn-delete"
-                onClick={handleDeleteList}
-                disabled={listSubmitting}
-              >
-                {listSubmitting ? 'Deleting...' : 'Delete'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Create Task Button */}
-      {selectedList && (
-        <button 
-          className="create-task-btn"
-          onClick={handleCreateTask}
-          title="Create Task"
-        >
-          +
-        </button>
-      )}
-
-      {/* Create Task Dialog */}
+      {/* Task Dialog */}
       {showTaskDialog && (
         <div className="dialog-overlay" onClick={handleCloseTaskDialog}>
-          <div className="dialog" onClick={(e) => e.stopPropagation()}>
+          <div className="dialog-content" onClick={(e) => e.stopPropagation()}>
             <div className="dialog-header">
-              <h2>Create New Task</h2>
-              <button 
-                className="dialog-close"
-                onClick={handleCloseTaskDialog}
-                type="button"
-              >
-                ×
+              <h2 className="dialog-title">{editingTask ? 'Edit Task' : 'Create Task'}</h2>
+              <button className="dialog-close" onClick={handleCloseTaskDialog}>
+                <span className="material-symbols-outlined">close</span>
               </button>
             </div>
-            
-            <form onSubmit={handleSubmitTask}>
+            <form onSubmit={handleSubmitTask} className="dialog-form">
               <div className="form-group">
-                <label htmlFor="task-title">Title *</label>
+                <label className="form-label">Task Title *</label>
                 <input
-                  id="task-title"
                   type="text"
                   className="form-input"
                   value={taskTitle}
@@ -1082,11 +809,9 @@ function Tasks() {
                   autoFocus
                 />
               </div>
-              
               <div className="form-group">
-                <label htmlFor="task-description">Description</label>
+                <label className="form-label">Description</label>
                 <textarea
-                  id="task-description"
                   className="form-textarea"
                   value={taskDescription}
                   onChange={(e) => setTaskDescription(e.target.value)}
@@ -1095,11 +820,9 @@ function Tasks() {
                   disabled={taskSubmitting}
                 />
               </div>
-              
               <div className="form-group">
-                <label htmlFor="task-due-date">Due Date</label>
+                <label className="form-label">Due Date</label>
                 <input
-                  id="task-due-date"
                   type="date"
                   className="form-input"
                   value={taskDueDate}
@@ -1107,180 +830,54 @@ function Tasks() {
                   disabled={taskSubmitting}
                 />
               </div>
-              
               <div className="form-group">
-                <label htmlFor="task-reminder-date">Reminder Date</label>
-                <input
-                  id="task-reminder-date"
-                  type="date"
-                  className="form-input"
-                  value={taskReminderDate}
-                  onChange={(e) => setTaskReminderDate(e.target.value)}
-                  disabled={taskSubmitting}
-                />
-              </div>
-              
-              <div className="form-group">
-                <label htmlFor="task-priority">Priority</label>
+                <label className="form-label">Priority</label>
                 <select
-                  id="task-priority"
                   className="form-select"
                   value={taskPriority}
                   onChange={(e) => setTaskPriority(e.target.value)}
                   disabled={taskSubmitting}
                 >
-                  <option value="VERY HIGH">Very High</option>
-                  <option value="HIGH">High</option>
-                  <option value="MEDIUM">Medium</option>
                   <option value="LOW">Low</option>
-                </select>
-              </div>
-              
-              {taskFormError && (
-                <div className="form-error">{taskFormError}</div>
-              )}
-              
-              <div className="dialog-actions">
-                <button 
-                  type="button"
-                  className="btn-cancel"
-                  onClick={handleCloseTaskDialog}
-                  disabled={taskSubmitting}
-                >
-                  Cancel
-                </button>
-                <button 
-                  type="submit"
-                  className="btn-submit"
-                  disabled={taskSubmitting}
-                >
-                  {taskSubmitting ? 'Creating...' : 'Create Task'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Edit Task Dialog */}
-      {showEditTaskDialog && (
-        <div className="dialog-overlay" onClick={handleCloseEditTaskDialog}>
-          <div className="dialog" onClick={(e) => e.stopPropagation()}>
-            <div className="dialog-header">
-              <h2>Edit Task</h2>
-              <button
-                className="dialog-close"
-                onClick={handleCloseEditTaskDialog}
-                type="button"
-              >
-                ×
-              </button>
-            </div>
-
-            <form onSubmit={handleUpdateTask}>
-              <div className="form-group">
-                <label htmlFor="edit-task-title">Title *</label>
-                <input
-                  id="edit-task-title"
-                  type="text"
-                  className="form-input"
-                  value={taskTitle}
-                  onChange={(e) => setTaskTitle(e.target.value)}
-                  placeholder="Enter task title"
-                  disabled={taskSubmitting}
-                  autoFocus
-                />
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="edit-task-description">Description</label>
-                <textarea
-                  id="edit-task-description"
-                  className="form-textarea"
-                  value={taskDescription}
-                  onChange={(e) => setTaskDescription(e.target.value)}
-                  placeholder="Enter task description (optional)"
-                  rows="3"
-                  disabled={taskSubmitting}
-                />
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="edit-task-status">Status</label>
-                <select
-                  id="edit-task-status"
-                  className="form-select"
-                  value={editTaskStatus}
-                  onChange={(e) => setEditTaskStatus(e.target.value)}
-                  disabled={taskSubmitting}
-                >
-                  <option value="CREATED">Created</option>
-                  <option value="IN_PROGRESS">In Progress</option>
-                  <option value="COMPLETED">Completed</option>
-                  <option value="BLOCKED">Blocked</option>
-                  <option value="PAUSED">Paused</option>
-                </select>
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="edit-task-due-date">Due Date</label>
-                <input
-                  id="edit-task-due-date"
-                  type="date"
-                  className="form-input"
-                  value={taskDueDate}
-                  onChange={(e) => setTaskDueDate(e.target.value)}
-                  disabled={taskSubmitting}
-                />
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="edit-task-reminder-date">Reminder Date</label>
-                <input
-                  id="edit-task-reminder-date"
-                  type="date"
-                  className="form-input"
-                  value={taskReminderDate}
-                  onChange={(e) => setTaskReminderDate(e.target.value)}
-                  disabled={taskSubmitting}
-                />
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="edit-task-priority">Priority</label>
-                <select
-                  id="edit-task-priority"
-                  className="form-select"
-                  value={taskPriority}
-                  onChange={(e) => setTaskPriority(e.target.value)}
-                  disabled={taskSubmitting}
-                >
+                  <option value="MEDIUM">Medium</option>
+                  <option value="HIGH">High</option>
                   <option value="VERY_HIGH">Very High</option>
-                  <option value="HIGH">High</option>
-                  <option value="MEDIUM">Medium</option>
-                  <option value="LOW">Low</option>
                 </select>
               </div>
-
-              {taskFormError && (
-                <div className="form-error">{taskFormError}</div>
-              )}
-
-              <div className="dialog-actions">
-                <button
-                  type="button"
-                  className="btn-cancel"
-                  onClick={handleCloseEditTaskDialog}
+              <div className="form-group">
+                <label className="form-label">Status</label>
+                <select
+                  className="form-select"
+                  value={taskStatus}
+                  onChange={(e) => setTaskStatus(e.target.value)}
                   disabled={taskSubmitting}
                 >
+                  <option value="CREATED">To Do</option>
+                  <option value="IN_PROGRESS">In Progress</option>
+                  <option value="BLOCKED">Blocked</option>
+                  <option value="COMPLETED">Done</option>
+                </select>
+              </div>
+              {taskFormError && <div className="form-error">{taskFormError}</div>}
+              <div className="dialog-actions">
+                {editingTask && (
+                  <button
+                    type="button"
+                    className="btn btn-danger"
+                    onClick={() => {
+                      handleCloseTaskDialog();
+                      handleDeleteTask(editingTask.id);
+                    }}
+                    disabled={taskSubmitting}
+                  >
+                    Delete
+                  </button>
+                )}
+                <button type="button" className="btn btn-secondary" onClick={handleCloseTaskDialog} disabled={taskSubmitting}>
                   Cancel
                 </button>
-                <button
-                  type="submit"
-                  className="btn-submit"
-                  disabled={taskSubmitting}
-                >
-                  {taskSubmitting ? 'Updating...' : 'Update Task'}
+                <button type="submit" className="btn btn-primary" disabled={taskSubmitting}>
+                  {taskSubmitting ? (editingTask ? 'Saving...' : 'Creating...') : (editingTask ? 'Save Task' : 'Create Task')}
                 </button>
               </div>
             </form>
@@ -1288,49 +885,99 @@ function Tasks() {
         </div>
       )}
 
-      {/* Delete Task Confirmation Dialog */}
-      {showDeleteTaskConfirm && (
-        <div className="dialog-overlay" onClick={handleCloseDeleteTaskConfirm}>
-          <div className="dialog confirm-dialog" onClick={(e) => e.stopPropagation()}>
+      {/* List Dialog */}
+      {showListDialog && (
+        <div className="dialog-overlay" onClick={handleCloseListDialog}>
+          <div className="dialog-content" onClick={(e) => e.stopPropagation()}>
             <div className="dialog-header">
-              <h2>Delete Task</h2>
-              <button 
-                className="dialog-close"
-                onClick={handleCloseDeleteTaskConfirm}
-                type="button"
-              >
-                ×
+              <h2 className="dialog-title">{editingList ? 'Edit List' : 'Create List'}</h2>
+              <button className="dialog-close" onClick={handleCloseListDialog}>
+                <span className="material-symbols-outlined">close</span>
               </button>
             </div>
-            
-            <div className="dialog-body">
-              <p className="warning-message">
-                Are you sure you want to delete this task?
-              </p>
-              
-              {deleteTaskMessage && (
-                <div className={deleteTaskMessage.includes('deleted') ? 'success-message' : 'form-error'}>
-                  {deleteTaskMessage}
-                </div>
-              )}
+            <form onSubmit={handleSubmitList} className="dialog-form">
+              <div className="form-group">
+                <label className="form-label">List Name *</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  value={listName}
+                  onChange={(e) => setListName(e.target.value)}
+                  placeholder="Enter list name"
+                  disabled={listSubmitting}
+                  autoFocus
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Description</label>
+                <textarea
+                  className="form-textarea"
+                  value={listDescription}
+                  onChange={(e) => setListDescription(e.target.value)}
+                  placeholder="Enter list description (optional)"
+                  rows="3"
+                  disabled={listSubmitting}
+                />
+              </div>
+              {listFormError && <div className="form-error">{listFormError}</div>}
+              <div className="dialog-actions">
+                {editingList && (
+                  <button
+                    type="button"
+                    className="btn btn-danger"
+                    onClick={(e) => {
+                      handleCloseListDialog();
+                      handleDeleteList(editingList.id, e);
+                    }}
+                    disabled={listSubmitting}
+                  >
+                    Delete
+                  </button>
+                )}
+                <button type="button" className="btn btn-secondary" onClick={handleCloseListDialog} disabled={listSubmitting}>
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-primary" disabled={listSubmitting}>
+                  {listSubmitting ? (editingList ? 'Saving...' : 'Creating...') : (editingList ? 'Save List' : 'Create List')}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Confirm Delete Dialog */}
+      {showConfirmDialog && (
+        <div className="dialog-overlay" onClick={() => setShowConfirmDialog(false)}>
+          <div className="dialog-content confirm-dialog" onClick={(e) => e.stopPropagation()}>
+            <div className="dialog-header">
+              <div className="confirm-icon">
+                <span className="material-symbols-outlined">warning</span>
+              </div>
             </div>
-            
-            <div className="dialog-actions dialog-actions-spaced">
-              <button 
+            <div className="confirm-body">
+              <h2 className="dialog-title">Confirm Delete</h2>
+              <p className="confirm-message">{confirmMessage}</p>
+            </div>
+            <div className="dialog-actions">
+              <button
                 type="button"
-                className="btn-cancel"
-                onClick={handleCloseDeleteTaskConfirm}
-                disabled={taskDeleting}
+                className="btn btn-secondary"
+                onClick={() => setShowConfirmDialog(false)}
               >
                 Cancel
               </button>
-              <button 
+              <button
                 type="button"
-                className="btn-delete"
-                onClick={handleDeleteTask}
-                disabled={taskDeleting}
+                className="btn btn-danger"
+                onClick={async () => {
+                  setShowConfirmDialog(false);
+                  if (confirmAction) {
+                    await confirmAction();
+                  }
+                }}
               >
-                {taskDeleting ? 'Deleting...' : 'Delete'}
+                Delete
               </button>
             </div>
           </div>

@@ -1,5 +1,6 @@
 package com.tan90.projects.pensieve.controller;
 
+import com.tan90.projects.pensieve.dto.TaskWithProjectDto;
 import com.tan90.projects.pensieve.entity.Task;
 import com.tan90.projects.pensieve.service.TaskService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,11 +20,34 @@ public class TaskController {
 
     /**
      * GET /tasks?listId={listId} - Get all tasks for a list
+     * GET /tasks?userId={userId}&status={status} - Get all tasks for a user by status
      */
     @GetMapping
-    public ResponseEntity<List<Task>> getTasksByListId(@RequestParam String listId) {
-        List<Task> tasks = taskService.getTasksByListId(listId);
-        return ResponseEntity.ok(tasks);
+    public ResponseEntity<?> getTasks(
+            @RequestParam(required = false) String listId,
+            @RequestParam(required = false) String userId,
+            @RequestParam(required = false) String status) {
+
+        // If userId and status are provided, get tasks by user and status
+        if (userId != null && status != null) {
+            try {
+                Task.Status taskStatus = Task.Status.valueOf(status);
+                List<TaskWithProjectDto> tasks = taskService.getTasksByUserAndStatus(userId, taskStatus);
+                return ResponseEntity.ok(tasks);
+            } catch (IllegalArgumentException e) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body("Invalid status value: " + status);
+            }
+        }
+
+        // If only listId is provided, get tasks by list
+        if (listId != null) {
+            List<Task> tasks = taskService.getTasksByListId(listId);
+            return ResponseEntity.ok(tasks);
+        }
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body("Either listId or (userId and status) must be provided");
     }
 
     /**

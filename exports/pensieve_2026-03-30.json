@@ -1,0 +1,37 @@
+{
+  "id": "d3ee90c6-7c4e-40a8-b872-ae56e5edcecd",
+  "name": "pensieve",
+  "completedDate": null,
+  "createdDate": "2026-03-30T13:07:41.822587",
+  "description": "",
+  "lists": [
+    {
+      "id": "b8335bf4-5a26-43c0-9581-01fa3fcd046f",
+      "name": "bugs",
+      "completedDate": null,
+      "createdDate": "2026-03-30T13:07:55.361675",
+      "description": "",
+      "project": null,
+      "tasks": [
+        {
+          "id": "8eb1a289-b393-404c-95dc-349bc5fb5ecb",
+          "title": "create task bug",
+          "attachments": null,
+          "completedDate": null,
+          "createdDate": "2026-03-30T13:08:26.457774",
+          "description": "task is not created when due date is selected",
+          "dueDate": null,
+          "list": null,
+          "parentTaskId": null,
+          "parentTaskIdFromRelation": null,
+          "priority": "MEDIUM",
+          "reminderDate": null,
+          "status": "CREATED",
+          "tags": null
+        }
+      ]
+    }
+  ],
+  "user": null,
+  "exportedAt": "2026-03-30T17:11:01.979Z"
+}

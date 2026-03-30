@@ -1,5 +1,6 @@
 package com.tan90.projects.pensieve.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import java.util.Set;
@@ -38,6 +39,9 @@ public class Task {
     @Enumerated(EnumType.STRING)
     private Priority priority;
 
+    @Column(name = "parent_id", insertable = false, updatable = false)
+    private String parentTaskId;
+
     // Enum for status values
     public enum Status {
         CREATED,
@@ -57,9 +61,11 @@ public class Task {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "parent_id")
+    @JsonIgnore
     private Task parent;
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonIgnore
     private Set<Task> subTasks;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -198,6 +204,19 @@ public class Task {
 
     public void setTags(Set<TaskTag> tags) {
         this.tags = tags;
+    }
+
+    public String getParentTaskId() {
+        return parentTaskId;
+    }
+
+    public void setParentTaskId(String parentTaskId) {
+        this.parentTaskId = parentTaskId;
+    }
+
+    // Helper method for backwards compatibility
+    public String getParentTaskIdFromRelation() {
+        return parent != null ? parent.getId() : null;
     }
 }
 

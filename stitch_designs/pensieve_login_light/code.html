@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Login | Pensieve Architectural Systems</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&amp;family=Inter:wght@300;400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "tertiary-container": "#002f2a",
+              "surface": "#f7f9fb",
+              "surface-container-low": "#f2f4f6",
+              "secondary-fixed": "#d5e3fd",
+              "surface-tint": "#4d44e3",
+              "outline-variant": "#c5c6cd",
+              "surface-dim": "#d8dadc",
+              "secondary": "#515f74",
+              "on-primary-container": "#8481ff",
+              "inverse-surface": "#2d3133",
+              "on-tertiary-fixed": "#00201d",
+              "on-tertiary": "#ffffff",
+              "on-primary": "#ffffff",
+              "surface-container-high": "#e6e8ea",
+              "on-primary-fixed-variant": "#3323cc",
+              "inverse-primary": "#c3c0ff",
+              "error": "#ba1a1a",
+              "on-secondary-container": "#57657b",
+              "on-secondary-fixed": "#0d1c2f",
+              "tertiary": "#001815",
+              "surface-container-highest": "#e0e3e5",
+              "primary": "#0a0054",
+              "on-primary-fixed": "#0f0069",
+              "surface-container": "#eceef0",
+              "tertiary-fixed-dim": "#6bd8cb",
+              "on-surface": "#191c1e",
+              "on-surface-variant": "#45474c",
+              "outline": "#75777d",
+              "error-container": "#ffdad6",
+              "surface-container-lowest": "#ffffff",
+              "on-error": "#ffffff",
+              "surface-bright": "#f7f9fb",
+              "primary-container": "#18008f",
+              "primary-fixed-dim": "#c3c0ff",
+              "primary-fixed": "#e2dfff",
+              "surface-variant": "#e0e3e5",
+              "on-tertiary-container": "#28a094",
+              "on-secondary": "#ffffff",
+              "on-tertiary-fixed-variant": "#005049",
+              "on-secondary-fixed-variant": "#3a485c",
+              "background": "#f7f9fb",
+              "tertiary-fixed": "#89f5e7",
+              "secondary-fixed-dim": "#b9c7e0",
+              "on-error-container": "#93000a",
+              "on-background": "#191c1e",
+              "secondary-container": "#d5e3fd",
+              "inverse-on-surface": "#eff1f3"
+            },
+            fontFamily: {
+              "headline": ["Manrope"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .architectural-gradient {
+            background: linear-gradient(135deg, #0a0054 0%, #4d44e3 100%);
+        }
+        .glass-panel {
+            background: rgba(247, 249, 251, 0.8);
+            backdrop-filter: blur(12px);
+        }
+    </style>
+</head>
+<body class="bg-surface font-body text-on-surface selection:bg-surface-tint selection:text-white min-h-screen flex flex-col">
+<!-- TopAppBar suppressed due to transactional nature of Login -->
+<main class="flex-grow flex items-center justify-center px-6 py-12 lg:p-0">
+<div class="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-2 overflow-hidden bg-surface-container-lowest rounded-xl shadow-[0_20px_40px_rgba(25,28,30,0.06)]">
+<!-- Branding/Visual Side -->
+<div class="hidden lg:flex relative architectural-gradient items-center justify-center p-16 overflow-hidden">
+<div class="absolute inset-0 opacity-20 pointer-events-none">
+<img alt="Blueprint schematic" class="w-full h-full object-cover" data-alt="Abstract architectural blueprint schematic lines in dark blue" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBruMJ2ZFeC-PW-U-faoabMibkSDriy6FmQdSyyOfXlieHHZeTGHn_nMlNJohX41-yyS5yPAcZjQ0mjGmSarU-h958JMNg-Ibt74Dc0H9ukV43GjrXg1M7j3pOY12Bmw_crwKg59_v0UvsWEYGQBWSsVrCMQmaddGIweRKP-guU2Y5Hh_WJiJnhVmpUREaMjHwC0t2u-2miujOmoaiNoQNEi8bsCXwXPZbWOWb82kFN3ruNwKuA5lMuxtk6kwuU8RYmmLIgmGZTx_Q"/>
+</div>
+<div class="relative z-10 text-white space-y-8">
+<div class="space-y-2">
+<span class="text-xs font-bold tracking-[0.2em] uppercase opacity-60">Architectural Curator</span>
+<h1 class="text-5xl font-headline font-extrabold tracking-tighter leading-tight">Pensieve</h1>
+</div>
+<p class="text-xl font-light opacity-90 max-w-md leading-relaxed">
+                        Where structural clarity meets editorial precision. Manage your projects with quiet authority.
+                    </p>
+<div class="pt-12 flex items-center gap-4">
+<div class="h-px w-12 bg-white/30"></div>
+<span class="text-sm font-medium tracking-wide">Design Studio v2.4</span>
+</div>
+</div>
+<!-- Floating Detail Card (Architectural Element) -->
+<div class="absolute bottom-12 right-12 glass-panel p-6 rounded-xl border border-white/10 shadow-xl max-w-xs">
+<div class="flex items-center gap-3 mb-3">
+<div class="w-2 h-2 rounded-full bg-tertiary-fixed"></div>
+<span class="text-[10px] uppercase tracking-widest font-bold text-primary">System Status: Optimal</span>
+</div>
+<p class="text-xs text-secondary leading-tight">Every boundary is defined by light, not lines. Welcome back to your workspace.</p>
+</div>
+</div>
+<!-- Login Content Side -->
+<div class="p-8 lg:p-20 flex flex-col justify-center">
+<div class="mb-12">
+<h2 class="text-3xl font-headline font-bold text-primary tracking-tight mb-2">Welcome Back</h2>
+<p class="text-secondary">Sign in to your architectural studio</p>
+</div>
+<!-- Google Auth -->
+<button class="w-full flex items-center justify-center gap-3 py-3 px-6 bg-surface-container-lowest border border-outline-variant/15 rounded-xl hover:bg-surface-container-low transition-colors duration-200 group">
+<svg class="w-5 h-5" viewbox="0 0 24 24">
+<path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"></path>
+<path d="M12 23c2.97 0 5.46-.98 7.28-2.65l-3.57-2.77c-1.01.68-2.31 1.09-3.71 1.09-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"></path>
+<path d="M5.84 14.14c-.22-.66-.35-1.36-.35-2.08s.13-1.42.35-2.08V7.14H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.86l3.66-2.86z" fill="#FBBC05"></path>
+<path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.14l3.66 2.86c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"></path>
+</svg>
+<span class="text-on-surface font-medium">Sign in with Google</span>
+</button>
+<!-- Separator -->
+<div class="relative my-10">
+<div class="absolute inset-0 flex items-center">
+<div class="w-full border-t border-outline-variant/15"></div>
+</div>
+<div class="relative flex justify-center text-xs uppercase tracking-[0.2em] font-bold text-outline">
+<span class="bg-surface-container-lowest px-4">OR</span>
+</div>
+</div>
+<!-- Form -->
+<form class="space-y-6">
+<div class="space-y-1.5">
+<label class="text-xs font-bold uppercase tracking-wider text-secondary/80 px-1" for="email">Email Address</label>
+<input class="w-full px-4 py-3 bg-surface-container-highest border-none rounded-xl text-on-surface placeholder:text-outline focus:ring-0 focus:bg-surface-container-lowest focus:border-b-2 focus:border-surface-tint transition-all duration-200" id="email" placeholder="name@architect.com" type="email"/>
+</div>
+<div class="space-y-1.5">
+<div class="flex justify-between items-center px-1">
+<label class="text-xs font-bold uppercase tracking-wider text-secondary/80" for="password">Password</label>
+<a class="text-xs font-semibold text-surface-tint hover:underline" href="#">Forgot password?</a>
+</div>
+<input class="w-full px-4 py-3 bg-surface-container-highest border-none rounded-xl text-on-surface placeholder:text-outline focus:ring-0 focus:bg-surface-container-lowest focus:border-b-2 focus:border-surface-tint transition-all duration-200" id="password" placeholder="••••••••" type="password"/>
+</div>
+<div class="pt-4 space-y-4">
+<button class="w-full py-4 architectural-gradient text-white font-headline font-bold rounded-xl shadow-lg shadow-primary/10 hover:shadow-primary/20 transition-all duration-300 transform hover:-translate-y-0.5" type="submit">
+                            Sign In
+                        </button>
+<p class="text-center text-sm text-secondary">
+                            Don't have an account? 
+                            <a class="text-primary font-bold hover:text-surface-tint transition-colors" href="#">Sign up</a>
+</p>
+</div>
+</form>
+</div>
+</div>
+</main>
+<!-- Footer from JSON -->
+<footer class="w-full border-t border-[#c5c6cd]/15 bg-[#f7f9fb] dark:bg-slate-950">
+<div class="flex flex-col md:flex-row justify-between items-center px-12 py-8 w-full max-w-7xl mx-auto">
+<span class="font-['Inter'] text-xs tracking-wide uppercase text-[#515f74] dark:text-slate-500 mb-4 md:mb-0">
+                © 2024 Pensieve Architectural Systems
+            </span>
+<div class="flex gap-8">
+<a class="font-['Inter'] text-xs tracking-wide uppercase text-[#515f74] dark:text-slate-500 hover:text-[#4d44e3] dark:hover:text-indigo-400 transition-opacity duration-300" href="#">Privacy</a>
+<a class="font-['Inter'] text-xs tracking-wide uppercase text-[#515f74] dark:text-slate-500 hover:text-[#4d44e3] dark:hover:text-indigo-400 transition-opacity duration-300" href="#">Terms</a>
+<a class="font-['Inter'] text-xs tracking-wide uppercase text-[#515f74] dark:text-slate-500 hover:text-[#4d44e3] dark:hover:text-indigo-400 transition-opacity duration-300" href="#">Security</a>
+<a class="font-['Inter'] text-xs tracking-wide uppercase text-[#515f74] dark:text-slate-500 hover:text-[#4d44e3] dark:hover:text-indigo-400 transition-opacity duration-300" href="#">Contact</a>
+</div>
+</div>
+</footer>
+</body></html>

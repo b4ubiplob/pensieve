@@ -1,5 +1,6 @@
 package com.tan90.projects.pensieve.controller;
 
+import com.tan90.projects.pensieve.dto.ProjectImportDto;
 import com.tan90.projects.pensieve.entity.Project;
 import com.tan90.projects.pensieve.service.ProjectService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -8,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/projects")
@@ -72,6 +74,23 @@ public class ProjectController {
             return ResponseEntity.noContent().build();
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+        }
+    }
+
+    /**
+     * POST /projects/import?userId={userId} - Import a project from JSON
+     */
+    @PostMapping("/import")
+    public ResponseEntity<?> importProject(@RequestBody ProjectImportDto importDto, @RequestParam String userId) {
+        try {
+            Project importedProject = projectService.importProject(importDto, userId);
+            return ResponseEntity.status(HttpStatus.CREATED).body(importedProject);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", e.getMessage()));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", e.getMessage()));
         }
     }
 }

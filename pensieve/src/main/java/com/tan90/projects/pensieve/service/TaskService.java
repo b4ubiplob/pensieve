@@ -1,5 +1,6 @@
 package com.tan90.projects.pensieve.service;
 
+import com.tan90.projects.pensieve.dto.TaskWithProjectDto;
 import com.tan90.projects.pensieve.entity.ProjectList;
 import com.tan90.projects.pensieve.entity.Task;
 import com.tan90.projects.pensieve.repository.ListRepository;
@@ -37,6 +38,7 @@ public class TaskService {
         copy.setCompletedDate(task.getCompletedDate());
         copy.setStatus(task.getStatus());
         copy.setPriority(task.getPriority());
+        copy.setParentTaskId(task.getParent() != null ? task.getParent().getId() : null);
         // Note: Excluding lazy-loaded collections (subTasks, attachments, tags, parent, list) to avoid serialization issues
         return copy;
     }
@@ -183,6 +185,39 @@ public class TaskService {
 
         // Then delete the task itself
         taskRepository.deleteById(id);
+    }
+
+    /**
+     * Get all tasks for a user by status, including project information
+     */
+    public List<TaskWithProjectDto> getTasksByUserAndStatus(String userId, Task.Status status) {
+        List<Task> tasks = taskRepository.findByUserIdAndStatus(userId, status);
+
+        return tasks.stream().map(task -> {
+            TaskWithProjectDto dto = new TaskWithProjectDto();
+            dto.setId(task.getId());
+            dto.setTitle(task.getTitle());
+            dto.setDescription(task.getDescription());
+            dto.setDueDate(task.getDueDate());
+            dto.setReminderDate(task.getReminderDate());
+            dto.setCreatedDate(task.getCreatedDate());
+            dto.setCompletedDate(task.getCompletedDate());
+            dto.setStatus(task.getStatus());
+            dto.setPriority(task.getPriority());
+
+            // Add project and list information
+            if (task.getList() != null) {
+                dto.setListId(task.getList().getId());
+                dto.setListName(task.getList().getName());
+
+                if (task.getList().getProject() != null) {
+                    dto.setProjectId(task.getList().getProject().getId());
+                    dto.setProjectName(task.getList().getProject().getName());
+                }
+            }
+
+            return dto;
+        }).collect(Collectors.toList());
     }
 }
 
