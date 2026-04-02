@@ -5,6 +5,7 @@ import Register from './components/Register'
 import Projects from './components/Projects'
 import Tasks from './components/Tasks'
 import Task from './components/Task'
+import TaskDetail from './components/TaskDetail'
 import OAuth2Redirect from './components/OAuth2Redirect'
 import ProtectedRoute from './components/ProtectedRoute'
 import { initializeSession } from './services/auth'
@@ -49,6 +50,11 @@ function App() {
         <Route path="/task" element={
           <ProtectedRoute>
             <Task />
+          </ProtectedRoute>
+        } />
+        <Route path="/task-detail" element={
+          <ProtectedRoute>
+            <TaskDetail />
           </ProtectedRoute>
         } />
       </Routes>

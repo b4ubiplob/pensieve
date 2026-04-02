@@ -33,6 +33,7 @@ function Projects() {
   const [showErrorDialog, setShowErrorDialog] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [isImporting, setIsImporting] = useState(false);
+  const [collapsedProjects, setCollapsedProjects] = useState({});
 
   useEffect(() => {
     if (isDarkMode) {
@@ -97,6 +98,14 @@ function Projects() {
       if (response.ok) {
         const data = await response.json();
         setMyDayTasks(data);
+
+        // Initialize collapsed state - first project expanded, others collapsed
+        const projectIds = [...new Set(data.map(task => task.projectId).filter(Boolean))];
+        const initialCollapsedState = {};
+        projectIds.forEach((projectId, index) => {
+          initialCollapsedState[projectId] = index !== 0; // First project (index 0) is false (expanded)
+        });
+        setCollapsedProjects(initialCollapsedState);
       } else {
         setMyDayTasks([]);
       }
@@ -241,6 +250,35 @@ function Projects() {
     } catch (err) {
       console.error('Error updating task status:', err);
     }
+  };
+
+  const toggleProjectCollapse = (projectId) => {
+    setCollapsedProjects(prev => ({
+      ...prev,
+      [projectId]: !prev[projectId]
+    }));
+  };
+
+  const groupTasksByProject = (tasks) => {
+    const grouped = {};
+    tasks.forEach(task => {
+      const projectId = task.projectId || 'no-project';
+      const projectName = task.projectName || 'No Project';
+
+      if (!grouped[projectId]) {
+        grouped[projectId] = {
+          projectId,
+          projectName,
+          tasks: []
+        };
+      }
+      grouped[projectId].tasks.push(task);
+    });
+
+    // Sort projects alphabetically by name
+    return Object.values(grouped).sort((a, b) =>
+      a.projectName.localeCompare(b.projectName)
+    );
   };
 
   const handleExportProject = async (project, event) => {
@@ -622,30 +660,62 @@ function Projects() {
               {!loadingTasks && myDayTasks.length === 0 && (
                 <div className="empty-large">No tasks in progress. Start working on a task to see it here.</div>
               )}
-              {!loadingTasks && myDayTasks.length > 0 && (
-                <div className="tasks-list-full">
-                  {myDayTasks.filter(task =>
-                    task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                    (task.description && task.description.toLowerCase().includes(searchQuery.toLowerCase())) ||
-                    (task.projectName && task.projectName.toLowerCase().includes(searchQuery.toLowerCase()))
-                  ).map((task) => (
-                    <div key={task.id} className="task-card">
-                      <div className="task-card-content">
-                        <div className="task-card-title">{task.title}</div>
-                        {task.description && <div className="task-card-description">{task.description}</div>}
-                        <div className="task-card-meta">
-                          {task.projectName && <span className="meta-tag">📁 {task.projectName}</span>}
-                          {task.priority && <span className={`priority-badge ${task.priority.toLowerCase()}`}>{task.priority}</span>}
+              {!loadingTasks && myDayTasks.length > 0 && (() => {
+                const filteredTasks = myDayTasks.filter(task =>
+                  task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                  (task.description && task.description.toLowerCase().includes(searchQuery.toLowerCase())) ||
+                  (task.projectName && task.projectName.toLowerCase().includes(searchQuery.toLowerCase()))
+                );
+
+                const projectGroups = groupTasksByProject(filteredTasks);
+
+                return (
+                  <div className="my-day-projects-grouped">
+                    {projectGroups.map(group => {
+                      const isCollapsed = collapsedProjects[group.projectId];
+
+                      return (
+                        <div key={group.projectId} className="project-group">
+                          <div
+                            className="project-group-header"
+                            onClick={() => toggleProjectCollapse(group.projectId)}
+                          >
+                            <div className="project-group-title-section">
+                              <span className="material-icon collapse-icon">
+                                {isCollapsed ? 'chevron_right' : 'expand_more'}
+                              </span>
+                              <span className="material-icon project-icon">folder</span>
+                              <h3 className="project-group-title">{group.projectName}</h3>
+                              <span className="project-task-count">{group.tasks.length}</span>
+                            </div>
+                          </div>
+
+                          {!isCollapsed && (
+                            <div className="project-group-content">
+                              {group.tasks.map((task) => (
+                                <div key={task.id} className="task-card">
+                                  <div className="task-card-content">
+                                    <div className="task-card-title">{task.title}</div>
+                                    {task.description && <div className="task-card-description">{task.description}</div>}
+                                    <div className="task-card-meta">
+                                      {task.listName && <span className="meta-tag">📋 {task.listName}</span>}
+                                      {task.priority && <span className={`priority-badge ${task.priority.toLowerCase()}`}>{task.priority}</span>}
+                                    </div>
+                                  </div>
+                                  <div className="task-card-actions">
+                                    <button className="btn-complete" onClick={() => handleSetToCompleted(task)}>✓ Complete</button>
+                                    <button className="btn-view" onClick={() => handleTaskClick(task)}>→</button>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
-                      </div>
-                      <div className="task-card-actions">
-                        <button className="btn-complete" onClick={() => handleSetToCompleted(task)}>✓ Complete</button>
-                        <button className="btn-view" onClick={() => handleTaskClick(task)}>→</button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+                      );
+                    })}
+                  </div>
+                );
+              })()}
             </>
           )}
 

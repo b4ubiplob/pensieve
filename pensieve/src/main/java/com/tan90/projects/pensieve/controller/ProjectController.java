@@ -1,5 +1,6 @@
 package com.tan90.projects.pensieve.controller;
 
+import com.tan90.projects.pensieve.dto.ProjectDto;
 import com.tan90.projects.pensieve.dto.ProjectImportDto;
 import com.tan90.projects.pensieve.entity.Project;
 import com.tan90.projects.pensieve.service.ProjectService;
@@ -23,8 +24,8 @@ public class ProjectController {
      * GET /projects?userId={userId} - Get all projects for a user
      */
     @GetMapping
-    public ResponseEntity<List<Project>> getProjectsByUserId(@RequestParam String userId) {
-        List<Project> projects = projectService.getProjectsByUserId(userId);
+    public ResponseEntity<List<ProjectDto>> getProjectsByUserId(@RequestParam String userId) {
+        List<ProjectDto> projects = projectService.getProjectsByUserId(userId);
         return ResponseEntity.ok(projects);
     }
 
@@ -32,7 +33,7 @@ public class ProjectController {
      * GET /projects/{id} - Get a single project by ID
      */
     @GetMapping("/{id}")
-    public ResponseEntity<Project> getProjectById(@PathVariable String id) {
+    public ResponseEntity<ProjectDto> getProjectById(@PathVariable String id) {
         return projectService.getProjectById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
@@ -44,7 +45,7 @@ public class ProjectController {
     @PostMapping
     public ResponseEntity<?> createProject(@RequestBody Project project, @RequestParam String userId) {
         try {
-            Project createdProject = projectService.createProject(project, userId);
+            ProjectDto createdProject = projectService.createProject(project, userId);
             return ResponseEntity.status(HttpStatus.CREATED).body(createdProject);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
@@ -57,7 +58,7 @@ public class ProjectController {
     @PutMapping("/{id}")
     public ResponseEntity<?> updateProject(@PathVariable String id, @RequestBody Project projectDetails) {
         try {
-            Project updatedProject = projectService.updateProject(id, projectDetails);
+            ProjectDto updatedProject = projectService.updateProject(id, projectDetails);
             return ResponseEntity.ok(updatedProject);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
@@ -83,7 +84,7 @@ public class ProjectController {
     @PostMapping("/import")
     public ResponseEntity<?> importProject(@RequestBody ProjectImportDto importDto, @RequestParam String userId) {
         try {
-            Project importedProject = projectService.importProject(importDto, userId);
+            ProjectDto importedProject = projectService.importProject(importDto, userId);
             return ResponseEntity.status(HttpStatus.CREATED).body(importedProject);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)

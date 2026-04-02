@@ -109,6 +109,24 @@ export const listAPI = {
       method: 'DELETE',
     });
   },
+
+  exportList: async (listId) => {
+    return apiRequest(`/lists/${listId}/export`);
+  },
+
+  importList: async (projectId, listData) => {
+    return apiRequest(`/lists/import?projectId=${projectId}`, {
+      method: 'POST',
+      body: JSON.stringify(listData),
+    });
+  },
+
+  reorderLists: async (projectId, reorderData) => {
+    return apiRequest(`/lists/reorder?projectId=${projectId}`, {
+      method: 'PUT',
+      body: JSON.stringify(reorderData),
+    });
+  },
 };
 
 // Task API

@@ -1,0 +1,112 @@
+package com.tan90.projects.pensieve.dto;
+
+import com.tan90.projects.pensieve.entity.Task;
+import java.time.LocalDateTime;
+import java.util.List;
+
+public class TaskDetailDto {
+    private String id;
+    private String title;
+    private String description;
+    private LocalDateTime dueDate;
+    private LocalDateTime reminderDate;
+    private LocalDateTime createdDate;
+    private LocalDateTime completedDate;
+    private Task.Status status;
+    private Task.Priority priority;
+    private String parentTaskId;
+    private List<TaskDto> subTasks;
+
+    // Constructors
+    public TaskDetailDto() {
+    }
+
+    // Getters and Setters
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public LocalDateTime getDueDate() {
+        return dueDate;
+    }
+
+    public void setDueDate(LocalDateTime dueDate) {
+        this.dueDate = dueDate;
+    }
+
+    public LocalDateTime getReminderDate() {
+        return reminderDate;
+    }
+
+    public void setReminderDate(LocalDateTime reminderDate) {
+        this.reminderDate = reminderDate;
+    }
+
+    public LocalDateTime getCreatedDate() {
+        return createdDate;
+    }
+
+    public void setCreatedDate(LocalDateTime createdDate) {
+        this.createdDate = createdDate;
+    }
+
+    public LocalDateTime getCompletedDate() {
+        return completedDate;
+    }
+
+    public void setCompletedDate(LocalDateTime completedDate) {
+        this.completedDate = completedDate;
+    }
+
+    public Task.Status getStatus() {
+        return status;
+    }
+
+    public void setStatus(Task.Status status) {
+        this.status = status;
+    }
+
+    public Task.Priority getPriority() {
+        return priority;
+    }
+
+    public void setPriority(Task.Priority priority) {
+        this.priority = priority;
+    }
+
+    public String getParentTaskId() {
+        return parentTaskId;
+    }
+
+    public void setParentTaskId(String parentTaskId) {
+        this.parentTaskId = parentTaskId;
+    }
+
+    public List<TaskDto> getSubTasks() {
+        return subTasks;
+    }
+
+    public void setSubTasks(List<TaskDto> subTasks) {
+        this.subTasks = subTasks;
+    }
+}

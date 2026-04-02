@@ -1,5 +1,7 @@
 package com.tan90.projects.pensieve.controller;
 
+import com.tan90.projects.pensieve.dto.TaskDto;
+import com.tan90.projects.pensieve.dto.TaskDetailDto;
 import com.tan90.projects.pensieve.dto.TaskWithProjectDto;
 import com.tan90.projects.pensieve.entity.Task;
 import com.tan90.projects.pensieve.service.TaskService;
@@ -42,7 +44,7 @@ public class TaskController {
 
         // If only listId is provided, get tasks by list
         if (listId != null) {
-            List<Task> tasks = taskService.getTasksByListId(listId);
+            List<TaskDto> tasks = taskService.getTasksByListId(listId);
             return ResponseEntity.ok(tasks);
         }
 
@@ -54,7 +56,7 @@ public class TaskController {
      * GET /tasks/{id} - Get a single task by ID with its child tasks
      */
     @GetMapping("/{id}")
-    public ResponseEntity<Task> getTaskById(@PathVariable String id) {
+    public ResponseEntity<TaskDetailDto> getTaskById(@PathVariable String id) {
         return taskService.getTaskByIdWithChildren(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
@@ -74,11 +76,11 @@ public class TaskController {
             // Check if creating a subtask or a top-level task
             if (parentTaskId != null && !parentTaskId.isEmpty()) {
                 // Create subtask
-                Task createdTask = taskService.createSubTask(task, parentTaskId);
+                TaskDto createdTask = taskService.createSubTask(task, parentTaskId);
                 return ResponseEntity.status(HttpStatus.CREATED).body(createdTask);
             } else if (listId != null && !listId.isEmpty()) {
                 // Create task for a list
-                Task createdTask = taskService.createTaskForList(task, listId);
+                TaskDto createdTask = taskService.createTaskForList(task, listId);
                 return ResponseEntity.status(HttpStatus.CREATED).body(createdTask);
             } else {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -95,7 +97,7 @@ public class TaskController {
     @PutMapping("/{id}")
     public ResponseEntity<?> updateTask(@PathVariable String id, @RequestBody Task taskDetails) {
         try {
-            Task updatedTask = taskService.updateTask(id, taskDetails);
+            TaskDto updatedTask = taskService.updateTask(id, taskDetails);
             return ResponseEntity.ok(updatedTask);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());

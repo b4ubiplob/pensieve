@@ -1,5 +1,6 @@
 package com.tan90.projects.pensieve.service;
 
+import com.tan90.projects.pensieve.dto.ProjectDto;
 import com.tan90.projects.pensieve.dto.ProjectImportDto;
 import com.tan90.projects.pensieve.entity.Project;
 import com.tan90.projects.pensieve.entity.ProjectList;
@@ -39,39 +40,40 @@ public class ProjectService {
     @Autowired
     private TaskRepository taskRepository;
 
-    // Helper method to return a copy of Project with details
-    private Project copyProjectDetails(Project project) {
+    // DTO Mapper
+    private ProjectDto toProjectDto(Project project) {
         if (project == null) return null;
-        Project copy = new Project();
-        copy.setId(project.getId());
-        copy.setName(project.getName());
-        copy.setDescription(project.getDescription());
-        copy.setCreatedDate(project.getCreatedDate());
-        copy.setCompletedDate(project.getCompletedDate());
-        // Note: Excluding lazy-loaded collections (lists, user) to avoid serialization issues
-        return copy;
+
+        ProjectDto dto = new ProjectDto();
+        dto.setId(project.getId());
+        dto.setName(project.getName());
+        dto.setDescription(project.getDescription());
+        dto.setCreatedDate(project.getCreatedDate());
+        dto.setCompletedDate(project.getCompletedDate());
+
+        return dto;
     }
 
     /**
      * Get all projects for a specific user
      */
-    public List<Project> getProjectsByUserId(String userId) {
+    public List<ProjectDto> getProjectsByUserId(String userId) {
         List<Project> projects = projectRepository.findByUserId(userId);
-        return projects.stream().map(this::copyProjectDetails).toList();
+        return projects.stream().map(this::toProjectDto).toList();
     }
 
     /**
      * Get a single project by ID
      */
-    public Optional<Project> getProjectById(String id) {
+    public Optional<ProjectDto> getProjectById(String id) {
         return projectRepository.findById(id)
-                .map(this::copyProjectDetails);
+                .map(this::toProjectDto);
     }
 
     /**
      * Create a new project for a user
      */
-    public Project createProject(Project project, String userId) {
+    public ProjectDto createProject(Project project, String userId) {
         // Validate that the user exists
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found with id: " + userId));
@@ -89,13 +91,14 @@ public class ProjectService {
         // Set the user
         project.setUser(user);
 
-        return copyProjectDetails(projectRepository.save(project));
+        Project savedProject = projectRepository.save(project);
+        return toProjectDto(savedProject);
     }
 
     /**
      * Update an existing project
      */
-    public Project updateProject(String id, Project projectDetails) {
+    public ProjectDto updateProject(String id, Project projectDetails) {
         Project project = projectRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Project not found with id: " + id));
 
@@ -110,7 +113,8 @@ public class ProjectService {
             project.setCompletedDate(projectDetails.getCompletedDate());
         }
 
-        return projectRepository.save(project);
+        Project savedProject = projectRepository.save(project);
+        return toProjectDto(savedProject);
     }
 
     /**
@@ -134,7 +138,7 @@ public class ProjectService {
     /**
      * Import a project from JSON data (transactional)
      */
-    public Project importProject(ProjectImportDto importDto, String userId) {
+    public ProjectDto importProject(ProjectImportDto importDto, String userId) {
         // Validate user exists
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found with id: " + userId));
@@ -207,7 +211,7 @@ public class ProjectService {
                 }
             }
 
-            return copyProjectDetails(project);
+            return toProjectDto(project);
         } catch (Exception e) {
             // Transaction will automatically rollback on exception
             throw new RuntimeException("Failed to import project: " + e.getMessage(), e);

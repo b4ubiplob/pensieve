@@ -1,46 +1,17 @@
-package com.tan90.projects.pensieve.entity;
+package com.tan90.projects.pensieve.dto;
 
-import jakarta.persistence.*;
 import java.time.LocalDateTime;
-import java.util.Set;
 
-@Entity
-@Table(name = "list", schema = "public")
-public class ProjectList {
-
-    @Id
-    @Column(name = "id", length = 64)
+public class ProjectListDto {
     private String id;
-
-    @Column(name = "name", length = 256, nullable = false)
     private String name;
-
-    @Column(name = "description", columnDefinition = "TEXT")
     private String description;
-
-    @Column(name = "created_date")
     private LocalDateTime createdDate;
-
-    @Column(name = "completed_date")
     private LocalDateTime completedDate;
-
-    @Column(name = "display_order")
     private Integer displayOrder;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "project_id")
-    private Project project;
-
-    @OneToMany(mappedBy = "list", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private Set<Task> tasks;
-
     // Constructors
-    public ProjectList() {
-    }
-
-    public ProjectList(String id, String name) {
-        this.id = id;
-        this.name = name;
+    public ProjectListDto() {
     }
 
     // Getters and Setters
@@ -84,22 +55,6 @@ public class ProjectList {
         this.completedDate = completedDate;
     }
 
-    public Project getProject() {
-        return project;
-    }
-
-    public void setProject(Project project) {
-        this.project = project;
-    }
-
-    public Set<Task> getTasks() {
-        return tasks;
-    }
-
-    public void setTasks(Set<Task> tasks) {
-        this.tasks = tasks;
-    }
-
     public Integer getDisplayOrder() {
         return displayOrder;
     }
@@ -108,4 +63,3 @@ public class ProjectList {
         this.displayOrder = displayOrder;
     }
 }
-

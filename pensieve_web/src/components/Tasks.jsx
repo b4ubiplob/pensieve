@@ -17,15 +17,6 @@ function Tasks() {
   const [loadingLists, setLoadingLists] = useState(true);
   const [loadingTasks, setLoadingTasks] = useState(false);
   const [error, setError] = useState(null);
-  const [showTaskDialog, setShowTaskDialog] = useState(false);
-  const [taskTitle, setTaskTitle] = useState('');
-  const [taskDescription, setTaskDescription] = useState('');
-  const [taskDueDate, setTaskDueDate] = useState('');
-  const [taskPriority, setTaskPriority] = useState('MEDIUM');
-  const [taskStatus, setTaskStatus] = useState('CREATED');
-  const [taskFormError, setTaskFormError] = useState(null);
-  const [taskSubmitting, setTaskSubmitting] = useState(false);
-  const [editingTask, setEditingTask] = useState(null);
   const [isDarkMode, setIsDarkMode] = useState(() => {
     const saved = localStorage.getItem('theme');
     return saved ? saved === 'dark' : true;
@@ -50,6 +41,11 @@ function Tasks() {
     'BLOCKED': true,         // Collapsed
     'COMPLETED': true        // Collapsed
   });
+  const [showImportDialog, setShowImportDialog] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const [importError, setImportError] = useState(null);
+  const [showEditProjectDialog, setShowEditProjectDialog] = useState(false);
+  const [editingLists, setEditingLists] = useState([]);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -85,13 +81,21 @@ function Tasks() {
 
       if (response.ok) {
         const data = await response.json();
-        const sortedLists = data.sort((a, b) =>
-          a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
-        );
-        setLists(sortedLists);
+        setLists(data); // Backend now returns ordered lists
 
-        if (sortedLists.length > 0) {
-          setSelectedList(sortedLists[0]);
+        // Check if there's a selectedListId from navigation state (e.g., returning from task detail)
+        const selectedListIdFromState = location.state?.selectedListId;
+        if (selectedListIdFromState) {
+          const listToSelect = data.find(l => l.id === selectedListIdFromState);
+          if (listToSelect) {
+            setSelectedList(listToSelect);
+            return;
+          }
+        }
+
+        // Otherwise select the first list
+        if (data.length > 0) {
+          setSelectedList(data[0]);
         }
       } else {
         setError('Failed to load lists');
@@ -124,6 +128,46 @@ function Tasks() {
     navigate('/projects', { state: { user } });
   };
 
+  const handleEditProject = () => {
+    setEditingLists([...lists]);
+    setShowEditProjectDialog(true);
+  };
+
+  const handleMoveListUp = (index) => {
+    if (index === 0) return;
+    const newLists = [...editingLists];
+    [newLists[index - 1], newLists[index]] = [newLists[index], newLists[index - 1]];
+    setEditingLists(newLists);
+  };
+
+  const handleMoveListDown = (index) => {
+    if (index === editingLists.length - 1) return;
+    const newLists = [...editingLists];
+    [newLists[index], newLists[index + 1]] = [newLists[index + 1], newLists[index]];
+    setEditingLists(newLists);
+  };
+
+  const handleSaveListOrder = async () => {
+    const reorderData = editingLists.map((list, index) => ({
+      listId: list.id,
+      displayOrder: (index + 1) * 1000,
+    }));
+
+    try {
+      const response = await listAPI.reorderLists(project.id, reorderData);
+
+      if (response.ok) {
+        const updatedLists = await response.json();
+        setLists(updatedLists);
+        setShowEditProjectDialog(false);
+      } else {
+        console.error('Failed to reorder lists');
+      }
+    } catch (error) {
+      console.error('Failed to reorder lists:', error);
+    }
+  };
+
   const handleLogout = async () => {
     await logout();
     navigate('/login');
@@ -137,78 +181,35 @@ function Tasks() {
     setIsSidebarCollapsed(!isSidebarCollapsed);
   };
 
-  const handleCreateTask = (status = 'CREATED') => {
-    setEditingTask(null);
-    setTaskTitle('');
-    setTaskDescription('');
-    setTaskDueDate('');
-    setTaskPriority('MEDIUM');
-    setTaskStatus(status);
-    setTaskFormError(null);
-    setShowTaskDialog(true);
-  };
-
-  const handleEditTask = (task) => {
-    setEditingTask(task);
-    setTaskTitle(task.title);
-    setTaskDescription(task.description || '');
-    setTaskDueDate(task.dueDate || '');
-    setTaskPriority(task.priority || 'MEDIUM');
-    setTaskStatus(task.status);
-    setTaskFormError(null);
-    setShowTaskDialog(true);
-  };
-
-  const handleCloseTaskDialog = () => {
-    setShowTaskDialog(false);
-    setTaskFormError(null);
-    setEditingTask(null);
-  };
-
-  const handleSubmitTask = async (e) => {
-    e.preventDefault();
-
-    if (!taskTitle.trim()) {
-      setTaskFormError('Task title is required');
-      return;
-    }
-
+  const handleCreateTask = async (status = 'CREATED') => {
     if (!selectedList) {
-      setTaskFormError('No list selected');
       return;
     }
 
     try {
-      setTaskSubmitting(true);
-      setTaskFormError(null);
-
       const taskData = {
-        title: taskTitle.trim(),
-        description: taskDescription.trim(),
-        dueDate: taskDueDate || null,
-        priority: taskPriority,
-        status: taskStatus,
+        title: 'New Task',
+        description: '',
+        dueDate: null,
+        priority: 'MEDIUM',
+        status: status,
       };
 
-      let response;
-      if (editingTask) {
-        response = await taskAPI.updateTask(editingTask.id, taskData);
-      } else {
-        response = await taskAPI.createTask(selectedList.id, taskData);
-      }
+      const response = await taskAPI.createTask(selectedList.id, taskData);
 
       if (response.ok || response.status === 201) {
-        handleCloseTaskDialog();
+        const newTask = await response.json();
         await fetchTasks(selectedList.id);
-      } else {
-        const errorData = await response.json().catch(() => ({}));
-        setTaskFormError(errorData.message || 'Failed to save task');
+        // Navigate to the new task detail page in edit mode
+        navigate('/task-detail', { state: { task: newTask, project, list: selectedList, user, openInEditMode: true } });
       }
     } catch (err) {
-      setTaskFormError('Failed to connect to server');
-    } finally {
-      setTaskSubmitting(false);
+      console.error('Error creating task:', err);
     }
+  };
+
+  const handleEditTask = (task) => {
+    navigate('/task-detail', { state: { task, project, list: selectedList, user } });
   };
 
   const handleDeleteTask = async (taskId) => {
@@ -308,6 +309,72 @@ function Tasks() {
     setShowConfirmDialog(true);
   };
 
+  const handleExportList = async (list, e) => {
+    e.stopPropagation();
+
+    try {
+      const response = await listAPI.exportList(list.id);
+      if (response.ok) {
+        const exportData = await response.json();
+
+        // Create and download JSON file
+        const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${list.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      }
+    } catch (err) {
+      console.error('Error exporting list:', err);
+    }
+  };
+
+  const handleImportList = () => {
+    setShowImportDialog(true);
+    setImportError(null);
+  };
+
+  const handleImportFileSelect = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    try {
+      setIsImporting(true);
+      setImportError(null);
+      const text = await file.text();
+
+      let listData;
+      try {
+        listData = JSON.parse(text);
+      } catch (parseError) {
+        setImportError('Invalid JSON file: The file is not a valid JSON format.');
+        return;
+      }
+
+      // Call the backend import endpoint
+      const response = await listAPI.importList(project.id, listData);
+
+      if (response.status === 201) {
+        // Success - refresh lists
+        await fetchLists();
+        setShowImportDialog(false);
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        const errorMsg = errorData.error || 'Failed to import list. Please check the file format.';
+        setImportError(errorMsg);
+      }
+    } catch (err) {
+      console.error('Error importing list:', err);
+      setImportError('Failed to import list: ' + err.message);
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
   const handleDragStart = (e, task) => {
     setDraggedTask(task);
     e.dataTransfer.effectAllowed = 'move';
@@ -381,9 +448,30 @@ function Tasks() {
       return matchesCompleted && matchesSearch;
     });
 
+    // Separate parent tasks from subtasks
+    const parentTasks = filteredTasks.filter(task => !task.parentTaskId);
+    const subtaskMap = {};
+
+    // Group subtasks by parent ID
+    filteredTasks.forEach(task => {
+      if (task.parentTaskId) {
+        if (!subtaskMap[task.parentTaskId]) {
+          subtaskMap[task.parentTaskId] = [];
+        }
+        subtaskMap[task.parentTaskId].push(task);
+      }
+    });
+
+    // Attach subtasks to their parent tasks
+    const tasksWithSubtasks = parentTasks.map(task => ({
+      ...task,
+      subTasks: subtaskMap[task.id] || []
+    }));
+
+    // Group by status
     const grouped = {};
     columns.forEach(column => {
-      grouped[column.id] = filteredTasks.filter(task => task.status === column.id);
+      grouped[column.id] = tasksWithSubtasks.filter(task => task.status === column.id);
     });
 
     return grouped;
@@ -435,19 +523,41 @@ function Tasks() {
         </div>
 
         <div className="workspace-section">
-          <h2 className="workspace-title">{project.name}</h2>
-          <p className="workspace-subtitle">Project Lists</p>
+          <div className="workspace-header">
+            <div>
+              <h2 className="workspace-title">{project.name}</h2>
+              <p className="workspace-subtitle">Project Lists</p>
+            </div>
+          </div>
+          <div className="workspace-actions">
+            <button
+              className="workspace-action-btn"
+              onClick={handleCreateList}
+              title="Add List"
+            >
+              <span className="material-symbols-outlined">add</span>
+            </button>
+            <button
+              className="workspace-action-btn"
+              onClick={handleImportList}
+              title="Import List"
+            >
+              <span className="material-symbols-outlined">upload</span>
+            </button>
+            <button
+              className="workspace-action-btn"
+              onClick={handleEditProject}
+              title="Edit Project"
+            >
+              <span className="material-symbols-outlined">settings</span>
+            </button>
+          </div>
         </div>
 
         <nav className="sidebar-nav">
           <div className="nav-item" onClick={handleBackToProjects}>
             <span className="material-symbols-outlined">arrow_back</span>
             <span className="nav-item-text">Back to Projects</span>
-          </div>
-
-          <div className="nav-item add-list-item" onClick={handleCreateList}>
-            <span className="material-symbols-outlined">add</span>
-            <span className="nav-item-text">Add List</span>
           </div>
 
           {loadingLists ? (
@@ -465,13 +575,33 @@ function Tasks() {
               <div
                 key={list.id}
                 className={`nav-item list-item-with-actions ${selectedList?.id === list.id ? 'active' : ''}`}
-                onClick={() => setSelectedList(list)}
               >
-                <span className="material-symbols-outlined">
+                <span
+                  className="material-symbols-outlined"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedList(list);
+                  }}
+                >
                   {selectedList?.id === list.id ? 'check_box' : 'list'}
                 </span>
-                <span className="nav-item-text">{list.name}</span>
+                <span
+                  className="nav-item-text"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedList(list);
+                  }}
+                >
+                  {list.name}
+                </span>
                 <div className="list-item-actions">
+                  <button
+                    className="list-item-action-btn"
+                    onClick={(e) => handleExportList(list, e)}
+                    title="Export list"
+                  >
+                    <span className="material-symbols-outlined">download</span>
+                  </button>
                   <button
                     className="list-item-action-btn"
                     onClick={(e) => handleEditList(list, e)}
@@ -636,28 +766,6 @@ function Tasks() {
                                   </div>
                                 )}
                               </div>
-                              <div className="task-card-actions">
-                                <button
-                                  className="task-card-action-btn"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleEditTask(task);
-                                  }}
-                                  title="Edit task"
-                                >
-                                  <span className="material-symbols-outlined">edit</span>
-                                </button>
-                                <button
-                                  className="task-card-action-btn delete"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleDeleteTask(task.id);
-                                  }}
-                                  title="Delete task"
-                                >
-                                  <span className="material-symbols-outlined">delete</span>
-                                </button>
-                              </div>
                             </div>
                           </div>
                         ))
@@ -720,57 +828,120 @@ function Tasks() {
                           {!isCollapsed && (
                             <div className="task-group-content">
                               {columnTasks.map(task => (
-                                <div key={task.id} className="list-task-row" onClick={() => handleEditTask(task)}>
-                                  <div className="list-task-main">
-                                    <div className="list-task-checkbox">
-                                      <div className={`task-checkbox ${task.status === 'COMPLETED' ? 'checked' : ''}`}>
-                                        {task.status === 'COMPLETED' && (
-                                          <span className="material-symbols-outlined">check</span>
+                                <div key={task.id} className="task-tree-item">
+                                  <div className="list-task-row" onClick={() => handleEditTask(task)}>
+                                    <div className="list-task-main">
+                                      <div className="list-task-checkbox">
+                                        <div className={`task-checkbox ${task.status === 'COMPLETED' ? 'checked' : ''}`}>
+                                          {task.status === 'COMPLETED' && (
+                                            <span className="material-symbols-outlined">check</span>
+                                          )}
+                                        </div>
+                                      </div>
+                                      <div className="list-task-info">
+                                        <h4 className={`list-task-title ${task.status === 'COMPLETED' ? 'completed' : ''}`}>
+                                          {task.title}
+                                        </h4>
+                                        {task.description && (
+                                          <p className="list-task-description">{task.description}</p>
                                         )}
+                                        <div className="list-task-meta">
+                                          <span className={`priority-badge-small priority-${task.priority?.toLowerCase()}`}>
+                                            {task.priority?.replace('_', ' ')}
+                                          </span>
+                                          {task.dueDate && (
+                                            <div className="due-date-small">
+                                              <span className="material-symbols-outlined">calendar_today</span>
+                                              <span>{formatDate(task.dueDate)}</span>
+                                            </div>
+                                          )}
+                                        </div>
                                       </div>
                                     </div>
-                                    <div className="list-task-info">
-                                      <h4 className={`list-task-title ${task.status === 'COMPLETED' ? 'completed' : ''}`}>
-                                        {task.title}
-                                      </h4>
-                                      {task.description && (
-                                        <p className="list-task-description">{task.description}</p>
-                                      )}
-                                      <div className="list-task-meta">
-                                        <span className={`priority-badge-small priority-${task.priority?.toLowerCase()}`}>
-                                          {task.priority?.replace('_', ' ')}
-                                        </span>
-                                        {task.dueDate && (
-                                          <div className="due-date-small">
-                                            <span className="material-symbols-outlined">calendar_today</span>
-                                            <span>{formatDate(task.dueDate)}</span>
+                                    <div className="list-task-actions">
+                                      <button
+                                        className="list-action-btn"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleEditTask(task);
+                                        }}
+                                        title="Edit task"
+                                      >
+                                        <span className="material-symbols-outlined">edit</span>
+                                      </button>
+                                      <button
+                                        className="list-action-btn delete"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleDeleteTask(task.id);
+                                        }}
+                                        title="Delete task"
+                                      >
+                                        <span className="material-symbols-outlined">delete</span>
+                                      </button>
+                                    </div>
+                                  </div>
+
+                                  {/* Subtasks */}
+                                  {task.subTasks && task.subTasks.length > 0 && (
+                                    <div className="subtasks-tree">
+                                      {task.subTasks.map(subtask => (
+                                        <div key={subtask.id} className="list-task-row subtask-row" onClick={() => handleEditTask(subtask)}>
+                                          <div className="list-task-main">
+                                            <div className="subtask-connector"></div>
+                                            <div className="list-task-checkbox">
+                                              <div className={`task-checkbox ${subtask.status === 'COMPLETED' ? 'checked' : ''}`}>
+                                                {subtask.status === 'COMPLETED' && (
+                                                  <span className="material-symbols-outlined">check</span>
+                                                )}
+                                              </div>
+                                            </div>
+                                            <div className="list-task-info">
+                                              <h4 className={`list-task-title ${subtask.status === 'COMPLETED' ? 'completed' : ''}`}>
+                                                {subtask.title}
+                                              </h4>
+                                              {subtask.description && (
+                                                <p className="list-task-description">{subtask.description}</p>
+                                              )}
+                                              <div className="list-task-meta">
+                                                <span className={`priority-badge-small priority-${subtask.priority?.toLowerCase()}`}>
+                                                  {subtask.priority?.replace('_', ' ')}
+                                                </span>
+                                                {subtask.dueDate && (
+                                                  <div className="due-date-small">
+                                                    <span className="material-symbols-outlined">calendar_today</span>
+                                                    <span>{formatDate(subtask.dueDate)}</span>
+                                                  </div>
+                                                )}
+                                              </div>
+                                            </div>
                                           </div>
-                                        )}
-                                      </div>
+                                          <div className="list-task-actions">
+                                            <button
+                                              className="list-action-btn"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleEditTask(subtask);
+                                              }}
+                                              title="Edit subtask"
+                                            >
+                                              <span className="material-symbols-outlined">edit</span>
+                                            </button>
+                                            <button
+                                              className="list-action-btn delete"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleDeleteTask(subtask.id);
+                                              }}
+                                              title="Delete subtask"
+                                            >
+                                              <span className="material-symbols-outlined">delete</span>
+                                            </button>
+                                          </div>
+                                        </div>
+                                      ))}
                                     </div>
-                                  </div>
-                                  <div className="list-task-actions">
-                                    <button
-                                      className="list-action-btn"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleEditTask(task);
-                                      }}
-                                      title="Edit task"
-                                    >
-                                      <span className="material-symbols-outlined">edit</span>
-                                    </button>
-                                    <button
-                                      className="list-action-btn delete"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleDeleteTask(task.id);
-                                      }}
-                                      title="Delete task"
-                                    >
-                                      <span className="material-symbols-outlined">delete</span>
-                                    </button>
-                                  </div>
+                                  )}
                                 </div>
                               ))}
                             </div>
@@ -786,112 +957,13 @@ function Tasks() {
         </div>
       </main>
 
-      {/* Task Dialog */}
-      {showTaskDialog && (
-        <div className="dialog-overlay" onClick={handleCloseTaskDialog}>
-          <div className="dialog-content" onClick={(e) => e.stopPropagation()}>
-            <div className="dialog-header">
-              <h2 className="dialog-title">{editingTask ? 'Edit Task' : 'Create Task'}</h2>
-              <button className="dialog-close" onClick={handleCloseTaskDialog}>
-                <span className="material-symbols-outlined">close</span>
-              </button>
-            </div>
-            <form onSubmit={handleSubmitTask} className="dialog-form">
-              <div className="form-group">
-                <label className="form-label">Task Title *</label>
-                <input
-                  type="text"
-                  className="form-input"
-                  value={taskTitle}
-                  onChange={(e) => setTaskTitle(e.target.value)}
-                  placeholder="Enter task title"
-                  disabled={taskSubmitting}
-                  autoFocus
-                />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Description</label>
-                <textarea
-                  className="form-textarea"
-                  value={taskDescription}
-                  onChange={(e) => setTaskDescription(e.target.value)}
-                  placeholder="Enter task description (optional)"
-                  rows="3"
-                  disabled={taskSubmitting}
-                />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Due Date</label>
-                <input
-                  type="date"
-                  className="form-input"
-                  value={taskDueDate}
-                  onChange={(e) => setTaskDueDate(e.target.value)}
-                  disabled={taskSubmitting}
-                />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Priority</label>
-                <select
-                  className="form-select"
-                  value={taskPriority}
-                  onChange={(e) => setTaskPriority(e.target.value)}
-                  disabled={taskSubmitting}
-                >
-                  <option value="LOW">Low</option>
-                  <option value="MEDIUM">Medium</option>
-                  <option value="HIGH">High</option>
-                  <option value="VERY_HIGH">Very High</option>
-                </select>
-              </div>
-              <div className="form-group">
-                <label className="form-label">Status</label>
-                <select
-                  className="form-select"
-                  value={taskStatus}
-                  onChange={(e) => setTaskStatus(e.target.value)}
-                  disabled={taskSubmitting}
-                >
-                  <option value="CREATED">To Do</option>
-                  <option value="IN_PROGRESS">In Progress</option>
-                  <option value="BLOCKED">Blocked</option>
-                  <option value="COMPLETED">Done</option>
-                </select>
-              </div>
-              {taskFormError && <div className="form-error">{taskFormError}</div>}
-              <div className="dialog-actions">
-                {editingTask && (
-                  <button
-                    type="button"
-                    className="btn btn-danger"
-                    onClick={() => {
-                      handleCloseTaskDialog();
-                      handleDeleteTask(editingTask.id);
-                    }}
-                    disabled={taskSubmitting}
-                  >
-                    Delete
-                  </button>
-                )}
-                <button type="button" className="btn btn-secondary" onClick={handleCloseTaskDialog} disabled={taskSubmitting}>
-                  Cancel
-                </button>
-                <button type="submit" className="btn btn-primary" disabled={taskSubmitting}>
-                  {taskSubmitting ? (editingTask ? 'Saving...' : 'Creating...') : (editingTask ? 'Save Task' : 'Create Task')}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
       {/* List Dialog */}
       {showListDialog && (
         <div className="dialog-overlay" onClick={handleCloseListDialog}>
           <div className="dialog-content" onClick={(e) => e.stopPropagation()}>
             <div className="dialog-header">
               <h2 className="dialog-title">{editingList ? 'Edit List' : 'Create List'}</h2>
-              <button className="dialog-close" onClick={handleCloseListDialog}>
+              <button className="dialog-close" onClick={handleCloseListDialog} title="Close dialog">
                 <span className="material-symbols-outlined">close</span>
               </button>
             </div>
@@ -979,6 +1051,105 @@ function Tasks() {
               >
                 Delete
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Project Dialog */}
+      {showEditProjectDialog && (
+        <div className="dialog-overlay" onClick={() => setShowEditProjectDialog(false)}>
+          <div className="dialog-content edit-project-dialog" onClick={(e) => e.stopPropagation()}>
+            <div className="dialog-header">
+              <h2 className="dialog-title">Edit Project</h2>
+              <button className="dialog-close" onClick={() => setShowEditProjectDialog(false)} title="Close dialog">
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+            <div className="dialog-body">
+              <h3 className="section-title">Project Details</h3>
+              <div className="project-info">
+                <p><strong>Name:</strong> {project.name}</p>
+                <p><strong>Description:</strong> {project.description || 'No description'}</p>
+              </div>
+
+              <h3 className="section-title">Reorder Lists</h3>
+              <p className="section-description">Use the arrow buttons to change the order of lists</p>
+              <div className="reorder-list">
+                {editingLists.map((list, index) => (
+                  <div key={list.id} className="reorder-item">
+                    <span className="reorder-item-name">{list.name}</span>
+                    <div className="reorder-item-actions">
+                      <button
+                        className="reorder-btn"
+                        onClick={() => handleMoveListUp(index)}
+                        disabled={index === 0}
+                        title="Move up"
+                      >
+                        <span className="material-symbols-outlined">arrow_upward</span>
+                      </button>
+                      <button
+                        className="reorder-btn"
+                        onClick={() => handleMoveListDown(index)}
+                        disabled={index === editingLists.length - 1}
+                        title="Move down"
+                      >
+                        <span className="material-symbols-outlined">arrow_downward</span>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="dialog-actions">
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => setShowEditProjectDialog(false)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={handleSaveListOrder}
+              >
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Import List Dialog */}
+      {showImportDialog && (
+        <div className="dialog-overlay" onClick={() => setShowImportDialog(false)}>
+          <div className="dialog-content" onClick={(e) => e.stopPropagation()}>
+            <div className="dialog-header">
+              <h2 className="dialog-title">Import List</h2>
+              <button className="dialog-close" onClick={() => setShowImportDialog(false)} title="Close dialog">
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+            <div className="dialog-form">
+              <div className="form-group">
+                <label className="form-label">Select JSON file</label>
+                <input
+                  type="file"
+                  accept=".json"
+                  onChange={handleImportFileSelect}
+                  disabled={isImporting}
+                  className="file-input"
+                />
+                <p className="form-hint">Choose a JSON file exported from another list</p>
+              </div>
+              {importError && <div className="form-error">{importError}</div>}
+              {isImporting && (
+                <div className="importing-state">
+                  <div className="loading-spinner"></div>
+                  <p>Importing list...</p>
+                </div>
+              )}
             </div>
           </div>
         </div>

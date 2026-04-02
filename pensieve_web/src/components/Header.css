@@ -131,6 +131,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 2rem;
+  width: 100%;
 }
 
 /* When search is hidden, push actions to the right */
@@ -181,9 +182,13 @@
 }
 
 .header-actions {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
+  display: inline-flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 1rem !important;
+  flex-shrink: 0 !important;
+  flex-wrap: nowrap !important;
 }
 
 .theme-toggle {
@@ -192,12 +197,15 @@
   border-radius: 9999px;
   width: 40px;
   height: 40px;
+  min-width: 40px;
+  min-height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   transition: all 0.2s ease;
   color: var(--on-surface-variant);
+  flex-shrink: 0;
 }
 
 .theme-toggle:hover {
@@ -212,6 +220,8 @@
 .user-avatar {
   width: 40px;
   height: 40px;
+  min-width: 40px;
+  min-height: 40px;
   border-radius: 50%;
   background: linear-gradient(135deg, var(--primary) 0%, var(--tertiary) 100%);
   display: flex;
@@ -222,6 +232,7 @@
   font-size: 0.875rem;
   cursor: pointer;
   transition: all 0.2s ease;
+  flex-shrink: 0;
 }
 
 .user-avatar:hover {
@@ -234,4 +245,56 @@
   height: 100%;
   border-radius: 50%;
   object-fit: cover;
+}
+
+/* Custom Tooltip Styling for Header */
+[title] {
+  position: relative;
+}
+
+[title]:hover::before {
+  content: attr(title);
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--surface-container-highest);
+  color: var(--on-surface);
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  font-size: 0.75rem;
+  font-family: 'Inter', sans-serif;
+  font-weight: 500;
+  white-space: nowrap;
+  z-index: 1000;
+  pointer-events: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--outline-variant);
+}
+
+[title]:hover::after {
+  content: '';
+  position: absolute;
+  bottom: calc(100% + 2px);
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: var(--surface-container-highest);
+  z-index: 1000;
+  pointer-events: none;
+}
+
+/* Theme toggle and user avatar tooltips should appear below in header */
+.header-actions .theme-toggle[title]:hover::before,
+.header-actions .user-avatar[title]:hover::before {
+  bottom: auto;
+  top: calc(100% + 8px);
+}
+
+.header-actions .theme-toggle[title]:hover::after,
+.header-actions .user-avatar[title]:hover::after {
+  bottom: auto;
+  top: calc(100% + 2px);
+  border-top-color: transparent;
+  border-bottom-color: var(--surface-container-highest);
 }

@@ -1,5 +1,7 @@
 package com.tan90.projects.pensieve.service;
 
+import com.tan90.projects.pensieve.dto.TaskDto;
+import com.tan90.projects.pensieve.dto.TaskDetailDto;
 import com.tan90.projects.pensieve.dto.TaskWithProjectDto;
 import com.tan90.projects.pensieve.entity.ProjectList;
 import com.tan90.projects.pensieve.entity.Task;
@@ -10,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -48,10 +51,11 @@ public class TaskService {
         if (task == null) return null;
         Task copy = copyTaskDetails(task);
 
-        // Include child tasks if they exist
-        if (task.getSubTasks() != null && !task.getSubTasks().isEmpty()) {
+        // Fetch child tasks from repository (not using lazy-loaded collection)
+        List<Task> childTasks = taskRepository.findByParentId(task.getId());
+        if (childTasks != null && !childTasks.isEmpty()) {
             copy.setSubTasks(
-                task.getSubTasks().stream()
+                childTasks.stream()
                     .map(this::copyTaskWithChildren)  // Recursively copy child tasks
                     .collect(Collectors.toSet())
             );
@@ -60,26 +64,75 @@ public class TaskService {
         return copy;
     }
 
+    // DTO Mappers
+    private TaskDto toTaskDto(Task task) {
+        if (task == null) return null;
+
+        TaskDto dto = new TaskDto();
+        dto.setId(task.getId());
+        dto.setTitle(task.getTitle());
+        dto.setDescription(task.getDescription());
+        dto.setDueDate(task.getDueDate());
+        dto.setReminderDate(task.getReminderDate());
+        dto.setCreatedDate(task.getCreatedDate());
+        dto.setCompletedDate(task.getCompletedDate());
+        dto.setStatus(task.getStatus());
+        dto.setPriority(task.getPriority());
+        dto.setParentTaskId(task.getParent() != null ? task.getParent().getId() : null);
+
+        return dto;
+    }
+
+    private TaskDetailDto toTaskDetailDto(Task task) {
+        if (task == null) return null;
+
+        TaskDetailDto dto = new TaskDetailDto();
+        dto.setId(task.getId());
+        dto.setTitle(task.getTitle());
+        dto.setDescription(task.getDescription());
+        dto.setDueDate(task.getDueDate());
+        dto.setReminderDate(task.getReminderDate());
+        dto.setCreatedDate(task.getCreatedDate());
+        dto.setCompletedDate(task.getCompletedDate());
+        dto.setStatus(task.getStatus());
+        dto.setPriority(task.getPriority());
+        dto.setParentTaskId(task.getParent() != null ? task.getParent().getId() : null);
+
+        // Fetch and include subtasks
+        List<Task> childTasks = taskRepository.findByParentId(task.getId());
+        if (childTasks != null && !childTasks.isEmpty()) {
+            dto.setSubTasks(
+                childTasks.stream()
+                    .map(this::toTaskDto)
+                    .collect(Collectors.toList())
+            );
+        } else {
+            dto.setSubTasks(new ArrayList<>());
+        }
+
+        return dto;
+    }
+
     /**
      * Get all tasks for a specific list
      */
-    public List<Task> getTasksByListId(String listId) {
+    public List<TaskDto> getTasksByListId(String listId) {
         List<Task> tasks = taskRepository.findByListId(listId);
-        return tasks.stream().map(this::copyTaskDetails).toList();
+        return tasks.stream().map(this::toTaskDto).toList();
     }
 
     /**
      * Get a single task by ID with its child tasks
      */
-    public Optional<Task> getTaskByIdWithChildren(String id) {
+    public Optional<TaskDetailDto> getTaskByIdWithChildren(String id) {
         return taskRepository.findById(id)
-                .map(this::copyTaskWithChildren);
+                .map(this::toTaskDetailDto);
     }
 
     /**
      * Create a new task for a list
      */
-    public Task createTaskForList(Task task, String listId) {
+    public TaskDto createTaskForList(Task task, String listId) {
         // Validate that the list exists
         ProjectList list = listRepository.findById(listId)
                 .orElseThrow(() -> new IllegalArgumentException("List not found with id: " + listId));
@@ -103,13 +156,14 @@ public class TaskService {
         task.setList(list);
         task.setParent(null); // No parent for top-level tasks
 
-        return taskRepository.save(task);
+        Task savedTask = taskRepository.save(task);
+        return toTaskDto(savedTask);
     }
 
     /**
      * Create a new subtask for a parent task
      */
-    public Task createSubTask(Task task, String parentTaskId) {
+    public TaskDto createSubTask(Task task, String parentTaskId) {
         // Validate that the parent task exists
         Task parentTask = taskRepository.findById(parentTaskId)
                 .orElseThrow(() -> new IllegalArgumentException("Parent task not found with id: " + parentTaskId));
@@ -133,15 +187,19 @@ public class TaskService {
         task.setParent(parentTask);
         task.setList(parentTask.getList());
 
-        return taskRepository.save(task);
+        Task savedTask = taskRepository.save(task);
+        return toTaskDto(savedTask);
     }
 
     /**
      * Update an existing task
      */
-    public Task updateTask(String id, Task taskDetails) {
+    public TaskDto updateTask(String id, Task taskDetails) {
         Task task = taskRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Task not found with id: " + id));
+
+        // Track previous status to detect completion
+        Task.Status previousStatus = task.getStatus();
 
         // Update fields
         if (taskDetails.getTitle() != null) {
@@ -161,12 +219,22 @@ public class TaskService {
         }
         if (taskDetails.getStatus() != null) {
             task.setStatus(taskDetails.getStatus());
+
+            // Automatically set completedDate when task is marked as COMPLETED
+            if (taskDetails.getStatus() == Task.Status.COMPLETED && previousStatus != Task.Status.COMPLETED) {
+                task.setCompletedDate(LocalDateTime.now());
+            }
+            // Clear completedDate if task is moved out of COMPLETED status
+            else if (taskDetails.getStatus() != Task.Status.COMPLETED && previousStatus == Task.Status.COMPLETED) {
+                task.setCompletedDate(null);
+            }
         }
         if (taskDetails.getPriority() != null) {
             task.setPriority(taskDetails.getPriority());
         }
 
-        return taskRepository.save(task);
+        Task savedTask = taskRepository.save(task);
+        return toTaskDto(savedTask);
     }
 
     /**

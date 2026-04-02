@@ -1568,3 +1568,133 @@ body {
     font-size: 32px;
   }
 }
+
+/* My Day - Project Groups */
+.my-day-projects-grouped {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.project-group {
+  background: var(--surface-container);
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--outline-variant);
+}
+
+.project-group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  background: var(--surface-container-high);
+  cursor: pointer;
+  transition: background 0.2s ease;
+  user-select: none;
+}
+
+.project-group-header:hover {
+  background: var(--surface-bright);
+}
+
+.project-group-title-section {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+}
+
+.collapse-icon {
+  color: var(--on-surface-variant);
+  transition: transform 0.2s ease;
+  font-size: 20px;
+}
+
+.project-icon {
+  color: var(--primary);
+  font-size: 20px;
+}
+
+.project-group-title {
+  font-family: 'Manrope', sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--on-surface);
+  margin: 0;
+}
+
+.project-task-count {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--on-surface-variant);
+  background: var(--surface-container);
+  padding: 4px 10px;
+  border-radius: 12px;
+  min-width: 28px;
+  text-align: center;
+}
+
+.project-group-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+}
+
+.project-group-content .task-card {
+  margin: 0;
+}
+
+/* Custom Tooltip Styling */
+[title] {
+  position: relative;
+}
+
+[title]:hover::before {
+  content: attr(title);
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--surface-container-highest);
+  color: var(--on-surface);
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  font-size: 0.75rem;
+  font-family: 'Inter', sans-serif;
+  font-weight: 500;
+  white-space: nowrap;
+  z-index: 1000;
+  pointer-events: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--outline-variant);
+}
+
+[title]:hover::after {
+  content: '';
+  position: absolute;
+  bottom: calc(100% + 2px);
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: var(--surface-container-highest);
+  z-index: 1000;
+  pointer-events: none;
+}
+
+/* Tooltip for buttons that should show below */
+.theme-toggle[title]:hover::before,
+.footer-link[title]:hover::before {
+  bottom: auto;
+  top: calc(100% + 8px);
+  transform: translateX(-50%);
+}
+
+.theme-toggle[title]:hover::after,
+.footer-link[title]:hover::after {
+  bottom: auto;
+  top: calc(100% + 2px);
+  border-top-color: transparent;
+  border-bottom-color: var(--surface-container-highest);
+}

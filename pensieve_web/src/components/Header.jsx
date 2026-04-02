@@ -17,14 +17,14 @@ function Header({ isDarkMode, toggleTheme, renderUserIcon, searchPlaceholder = "
           </div>
         )}
         <div className="header-actions">
-          <button className="theme-toggle" onClick={toggleTheme}>
+          <div className="user-avatar" title="User profile">
+            {renderUserIcon()}
+          </div>
+          <button className="theme-toggle" onClick={toggleTheme} title={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}>
             <span className="material-symbols-outlined">
               {isDarkMode ? 'light_mode' : 'dark_mode'}
             </span>
           </button>
-          <div className="user-avatar">
-            {renderUserIcon()}
-          </div>
         </div>
       </div>
     </header>
