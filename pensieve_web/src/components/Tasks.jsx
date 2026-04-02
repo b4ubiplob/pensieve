@@ -46,6 +46,8 @@ function Tasks() {
   const [importError, setImportError] = useState(null);
   const [showEditProjectDialog, setShowEditProjectDialog] = useState(false);
   const [editingLists, setEditingLists] = useState([]);
+  const [expandedTasks, setExpandedTasks] = useState({});
+  const [expandedListViewTasks, setExpandedListViewTasks] = useState({});
 
   useEffect(() => {
     const root = document.documentElement;
@@ -407,13 +409,34 @@ function Tasks() {
   };
 
   const getTasksByStatus = (status) => {
-    return tasks.filter(task => {
+    const filteredTasks = tasks.filter(task => {
       const matchesStatus = task.status === status;
       const matchesSearch = !searchQuery ||
         task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (task.description && task.description.toLowerCase().includes(searchQuery.toLowerCase()));
       return matchesStatus && matchesSearch;
     });
+
+    // Separate parent tasks from subtasks
+    const parentTasks = filteredTasks.filter(task => !task.parentTaskId);
+
+    // Build subtask map from ALL tasks (not just filtered by status)
+    // This ensures parent tasks show all their subtasks regardless of subtask status
+    const subtaskMap = {};
+    tasks.forEach(task => {
+      if (task.parentTaskId) {
+        if (!subtaskMap[task.parentTaskId]) {
+          subtaskMap[task.parentTaskId] = [];
+        }
+        subtaskMap[task.parentTaskId].push(task);
+      }
+    });
+
+    // Attach subtasks to their parent tasks
+    return parentTasks.map(task => ({
+      ...task,
+      subTasks: subtaskMap[task.id] || []
+    }));
   };
 
   const formatDate = (dateString) => {
@@ -436,6 +459,22 @@ function Tasks() {
     setCollapsedGroups(prev => ({
       ...prev,
       [status]: !prev[status]
+    }));
+  };
+
+  const toggleTaskExpansion = (taskId, e) => {
+    e.stopPropagation();
+    setExpandedTasks(prev => ({
+      ...prev,
+      [taskId]: !prev[taskId]
+    }));
+  };
+
+  const toggleListViewTaskExpansion = (taskId, e) => {
+    e.stopPropagation();
+    setExpandedListViewTasks(prev => ({
+      ...prev,
+      [taskId]: !prev[taskId]
     }));
   };
 
@@ -724,49 +763,90 @@ function Tasks() {
                         </div>
                       ) : (
                         columnTasks.map(task => (
-                          <div
-                            key={task.id}
-                            className={`task-card ${column.id === 'COMPLETED' ? 'completed' : ''} ${column.id === 'IN_PROGRESS' ? 'in-progress' : ''} ${column.id === 'BLOCKED' ? 'blocked' : ''}`}
-                            draggable
-                            onDragStart={(e) => handleDragStart(e, task)}
-                            onClick={() => handleEditTask(task)}
-                          >
-                            <div className="task-tags">
-                              <span className={`task-tag priority-${task.priority?.toLowerCase()}`}>
-                                {task.priority?.replace('_', ' ')}
-                              </span>
-                            </div>
-
-                            <h4 className="task-title">
-                              {task.title}
-                            </h4>
-
-                            {column.id === 'IN_PROGRESS' && (
-                              <div className="task-progress">
-                                <div className="progress-bar-container">
-                                  <div className="progress-bar">
-                                    <div className="progress-fill" style={{ width: '66%' }}></div>
-                                  </div>
+                          <div key={task.id} className="task-card-wrapper">
+                            <div
+                              className={`task-card ${column.id === 'COMPLETED' ? 'completed' : ''} ${column.id === 'IN_PROGRESS' ? 'in-progress' : ''} ${column.id === 'BLOCKED' ? 'blocked' : ''} ${task.subTasks && task.subTasks.length > 0 ? 'has-subtasks' : ''}`}
+                              draggable
+                              onDragStart={(e) => handleDragStart(e, task)}
+                              onClick={() => handleEditTask(task)}
+                            >
+                              <div className="task-card-header">
+                                {task.subTasks && task.subTasks.length > 0 && (
+                                  <button
+                                    className="task-expand-btn"
+                                    onClick={(e) => toggleTaskExpansion(task.id, e)}
+                                    title={expandedTasks[task.id] ? 'Collapse subtasks' : 'Expand subtasks'}
+                                  >
+                                    <span className="material-symbols-outlined">
+                                      {expandedTasks[task.id] ? 'expand_less' : 'expand_more'}
+                                    </span>
+                                  </button>
+                                )}
+                                <div className="task-tags">
+                                  <span className={`task-tag priority-${task.priority?.toLowerCase()}`}>
+                                    {task.priority?.replace('_', ' ')}
+                                  </span>
+                                  {task.subTasks && task.subTasks.length > 0 && (
+                                    <span className="task-subtask-count">
+                                      <span className="material-symbols-outlined">checklist</span>
+                                      {task.subTasks.filter(st => st.status === 'COMPLETED').length}/{task.subTasks.length}
+                                    </span>
+                                  )}
                                 </div>
                               </div>
-                            )}
 
-                            <div className="task-footer">
-                              <div className="task-meta">
-                                {task.dueDate && (
-                                  <div className="task-date">
-                                    <span className="material-symbols-outlined">calendar_today</span>
-                                    <span>{formatDate(task.dueDate)}</span>
+                              <h4 className="task-title">
+                                {task.title}
+                              </h4>
+
+                              {column.id === 'IN_PROGRESS' && (
+                                <div className="task-progress">
+                                  <div className="progress-bar-container">
+                                    <div className="progress-bar">
+                                      <div className="progress-fill" style={{ width: '66%' }}></div>
+                                    </div>
                                   </div>
-                                )}
-                                {column.id === 'COMPLETED' && (
-                                  <div className="task-completed-badge">
-                                    <span className="material-symbols-outlined">check_circle</span>
-                                    <span>Completed</span>
-                                  </div>
-                                )}
+                                </div>
+                              )}
+
+                              <div className="task-footer">
+                                <div className="task-meta">
+                                  {task.dueDate && (
+                                    <div className="task-date">
+                                      <span className="material-symbols-outlined">calendar_today</span>
+                                      <span>{formatDate(task.dueDate)}</span>
+                                    </div>
+                                  )}
+                                  {column.id === 'COMPLETED' && (
+                                    <div className="task-completed-badge">
+                                      <span className="material-symbols-outlined">check_circle</span>
+                                      <span>Completed</span>
+                                    </div>
+                                  )}
+                                </div>
                               </div>
                             </div>
+
+                            {/* Subtasks */}
+                            {expandedTasks[task.id] && task.subTasks && task.subTasks.length > 0 && (
+                              <div className="subtask-list">
+                                {task.subTasks.map(subtask => (
+                                  <div
+                                    key={subtask.id}
+                                    className={`subtask-card ${subtask.status === 'COMPLETED' ? 'completed' : ''}`}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleEditTask(subtask);
+                                    }}
+                                  >
+                                    <span className="material-symbols-outlined subtask-icon">
+                                      {subtask.status === 'COMPLETED' ? 'check_circle' : 'radio_button_unchecked'}
+                                    </span>
+                                    <span className="subtask-title">{subtask.title}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
                           </div>
                         ))
                       )}
@@ -831,6 +911,17 @@ function Tasks() {
                                 <div key={task.id} className="task-tree-item">
                                   <div className="list-task-row" onClick={() => handleEditTask(task)}>
                                     <div className="list-task-main">
+                                      {task.subTasks && task.subTasks.length > 0 && (
+                                        <button
+                                          className="list-task-expand-btn"
+                                          onClick={(e) => toggleListViewTaskExpansion(task.id, e)}
+                                          title={expandedListViewTasks[task.id] ? 'Collapse subtasks' : 'Expand subtasks'}
+                                        >
+                                          <span className="material-symbols-outlined">
+                                            {expandedListViewTasks[task.id] ? 'expand_more' : 'chevron_right'}
+                                          </span>
+                                        </button>
+                                      )}
                                       <div className="list-task-checkbox">
                                         <div className={`task-checkbox ${task.status === 'COMPLETED' ? 'checked' : ''}`}>
                                           {task.status === 'COMPLETED' && (
@@ -849,6 +940,12 @@ function Tasks() {
                                           <span className={`priority-badge-small priority-${task.priority?.toLowerCase()}`}>
                                             {task.priority?.replace('_', ' ')}
                                           </span>
+                                          {task.subTasks && task.subTasks.length > 0 && (
+                                            <span className="subtask-count-badge">
+                                              <span className="material-symbols-outlined">checklist</span>
+                                              {task.subTasks.filter(st => st.status === 'COMPLETED').length}/{task.subTasks.length}
+                                            </span>
+                                          )}
                                           {task.dueDate && (
                                             <div className="due-date-small">
                                               <span className="material-symbols-outlined">calendar_today</span>
@@ -883,7 +980,7 @@ function Tasks() {
                                   </div>
 
                                   {/* Subtasks */}
-                                  {task.subTasks && task.subTasks.length > 0 && (
+                                  {expandedListViewTasks[task.id] && task.subTasks && task.subTasks.length > 0 && (
                                     <div className="subtasks-tree">
                                       {task.subTasks.map(subtask => (
                                         <div key={subtask.id} className="list-task-row subtask-row" onClick={() => handleEditTask(subtask)}>

@@ -696,6 +696,12 @@
   gap: 1rem;
 }
 
+.task-card-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
 .task-card {
   background: var(--surface-container-low);
   border-radius: 1rem;
@@ -704,6 +710,43 @@
   border: 1px solid transparent;
   cursor: grab;
   position: relative;
+}
+
+.task-card.has-subtasks {
+  padding: 1rem 1.5rem 1.5rem 1.5rem;
+}
+
+.task-card-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.task-expand-btn {
+  background: transparent;
+  border: none;
+  color: var(--on-surface-variant);
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  margin-top: -2px;
+}
+
+.task-expand-btn:hover {
+  background: var(--surface-container-high);
+  color: var(--on-surface);
+}
+
+.task-expand-btn .material-symbols-outlined {
+  font-size: 20px;
 }
 
 .task-card:hover {
@@ -743,6 +786,23 @@
   gap: 0.5rem;
   margin-bottom: 1rem;
   flex-wrap: wrap;
+  flex: 1;
+}
+
+.task-subtask-count {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.625rem;
+  font-weight: 700;
+  color: var(--on-surface-variant);
+  background: var(--surface-container-high);
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+}
+
+.task-subtask-count .material-symbols-outlined {
+  font-size: 14px;
 }
 
 .task-tag {
@@ -1315,6 +1375,62 @@
   background: var(--outline);
 }
 
+/* Subtask List Styles */
+.subtask-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-left: 1rem;
+  border-left: 2px solid var(--outline-variant);
+  margin-left: 0.75rem;
+}
+
+.subtask-card {
+  background: var(--surface-container);
+  border-radius: 0.5rem;
+  padding: 0.75rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+}
+
+.subtask-card:hover {
+  background: var(--surface-container-high);
+  border-color: var(--outline-variant);
+}
+
+.subtask-card.completed {
+  opacity: 0.6;
+}
+
+.subtask-card.completed:hover {
+  opacity: 0.8;
+}
+
+.subtask-icon {
+  font-size: 18px;
+  color: var(--on-surface-variant);
+  flex-shrink: 0;
+}
+
+.subtask-card.completed .subtask-icon {
+  color: var(--tertiary);
+}
+
+.subtask-title {
+  font-size: 0.875rem;
+  color: var(--on-surface);
+  flex: 1;
+}
+
+.subtask-card.completed .subtask-title {
+  text-decoration: line-through;
+  color: var(--on-surface-variant);
+}
+
 /* List View Styles */
 .list-view {
   margin-top: 2rem;
@@ -1703,6 +1819,32 @@
   min-width: 0;
 }
 
+.list-task-expand-btn {
+  background: transparent;
+  border: none;
+  color: var(--on-surface-variant);
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  margin-top: 0.125rem;
+}
+
+.list-task-expand-btn:hover {
+  background: var(--surface-container-high);
+  color: var(--on-surface);
+}
+
+.list-task-expand-btn .material-symbols-outlined {
+  font-size: 20px;
+}
+
 .list-task-checkbox {
   flex-shrink: 0;
   padding-top: 0.125rem;
@@ -1792,6 +1934,22 @@
 .priority-badge-small.priority-low {
   background-color: rgba(207, 222, 245, 0.15);
   color: var(--secondary);
+}
+
+.subtask-count-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--on-surface-variant);
+  background: var(--surface-container-high);
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+}
+
+.subtask-count-badge .material-symbols-outlined {
+  font-size: 14px;
 }
 
 .due-date-small {

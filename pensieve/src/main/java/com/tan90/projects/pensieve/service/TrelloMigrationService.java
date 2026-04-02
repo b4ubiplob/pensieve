@@ -24,11 +24,13 @@ public class TrelloMigrationService {
     private static final String LIST_NAME_BOOKS = "books";
     private static final String LIST_NAME_MOVIES = "movies";
     private static final String LIST_NAME_PERSONAL = "personal";
+    private static final String LIST_NAME_TV_SHOWS = "tv shows";
 
 
     private static final String BOOKS_JSON_FILE_PATH = "/trello/books.json";
     private static final String MOVIES_JSON_FILE_PATH = "/trello/movies.json";
     private static final String PERSONAL_JSON_FILE_PATH = "/trello/tasks.json";
+    private static final String TV_SHOWS_JSON_FILE_PATH = "/trello/tv_shows.json";
 
 
     @Autowired
@@ -73,11 +75,29 @@ public class TrelloMigrationService {
 
             // Save all tasks to the database
             int taskCount = 0;
+            int subtaskCount = 0;
             for (Task task : tasks) {
                 try {
+                    // Save the parent task first (without subtasks to avoid cascade issues)
+                    java.util.Set<Task> subtasks = task.getSubTasks();
+                    task.setSubTasks(null); // Temporarily remove subtasks
+
                     taskService.createTaskForList(task, list.getId());
                     taskCount++;
                     System.out.println("Created task: " + task.getTitle() + " (Status: " + task.getStatus() + ")");
+
+                    // Now save subtasks if they exist
+                    if (subtasks != null && !subtasks.isEmpty()) {
+                        for (Task subtask : subtasks) {
+                            try {
+                                taskService.createSubTask(subtask, task.getId());
+                                subtaskCount++;
+                                System.out.println("  Created subtask: " + subtask.getTitle() + " (Status: " + subtask.getStatus() + ")");
+                            } catch (Exception e) {
+                                System.err.println("  Error creating subtask: " + subtask.getTitle() + " - " + e.getMessage());
+                            }
+                        }
+                    }
                 } catch (Exception e) {
                     System.err.println("Error creating task: " + task.getTitle() + " - " + e.getMessage());
                     e.printStackTrace();
@@ -86,6 +106,7 @@ public class TrelloMigrationService {
 
             System.out.println("\nMigration completed successfully!");
             System.out.println("Total tasks created: " + taskCount);
+            System.out.println("Total subtasks created: " + subtaskCount);
 
         } catch (Exception e) {
             System.err.println("Migration failed: " + e.getMessage());
@@ -103,6 +124,12 @@ public class TrelloMigrationService {
         List<Task> tasks = trelloJsonParser.getTasksForPersonalTasks(PERSONAL_JSON_FILE_PATH);
         saveTasks(tasks, LIST_NAME_PERSONAL);
     }
+
+    public void migrateTVShowsFromJson() {
+        List<Task> tasks = trelloJsonParser.getTasksForTVShows(TV_SHOWS_JSON_FILE_PATH);
+        saveTasks(tasks, LIST_NAME_TV_SHOWS);
+    }
+
     private User getOrCreateUser() {
         Optional<User> existingUser = userRepository.findByEmail(USER_EMAIL);
 

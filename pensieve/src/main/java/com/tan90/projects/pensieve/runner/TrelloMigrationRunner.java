@@ -29,7 +29,9 @@ public class TrelloMigrationRunner implements CommandLineRunner {
 
             //trelloMigrationService.migrateMoviesFromJson();
 
-            //trelloMigrationService.migratePersonalTasksFromJson();
+            //trelloMigrationService.migratePersonalTasksFromJson();x
+
+            //trelloMigrationService.migrateTVShowsFromJson();
 
             System.out.println("\n========================================");
             System.out.println("Trello Books Migration Completed Successfully!");
