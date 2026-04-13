@@ -7,6 +7,7 @@ import com.tan90.projects.pensieve.service.JwtService;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.oauth2.core.user.OAuth2User;
@@ -21,6 +22,9 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
 
     private final JwtService jwtService;
     private final JwtConfig jwtConfig;
+
+    @Value("${frontend.url}")
+    private String frontendUrl;
 
     public OAuth2AuthenticationSuccessHandler(JwtService jwtService, JwtConfig jwtConfig) {
         this.jwtService = jwtService;
@@ -58,7 +62,7 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
             String refreshToken = jwtService.generateRefreshToken(userDetails);
 
             // Redirect to frontend with tokens
-            String targetUrl = UriComponentsBuilder.fromUriString("http://localhost:5173/oauth2/redirect")
+            String targetUrl = UriComponentsBuilder.fromUriString(frontendUrl + "/oauth2/redirect")
                     .queryParam("token", accessToken)
                     .queryParam("refresh", refreshToken)
                     .build().toUriString();
@@ -67,7 +71,7 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
 
         } catch (Exception e) {
             // Redirect to frontend with error
-            String errorUrl = "http://localhost:5173/login?error=oauth_failed";
+            String errorUrl = frontendUrl + "/login?error=oauth_failed";
             getRedirectStrategy().sendRedirect(request, response, errorUrl);
         }
     }

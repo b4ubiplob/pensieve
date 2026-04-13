@@ -28,6 +28,9 @@ public class TaskService {
     @Autowired
     private ListRepository listRepository;
 
+    @Autowired
+    private TaskStatusEventService taskStatusEventService;
+
     // Helper method to return a copy of Task with details
     private Task copyTaskDetails(Task task) {
         if (task == null) return null;
@@ -157,6 +160,15 @@ public class TaskService {
         task.setParent(null); // No parent for top-level tasks
 
         Task savedTask = taskRepository.save(task);
+
+        // Record initial CREATED event
+        taskStatusEventService.recordStatusChange(
+                savedTask.getId(),
+                null,  // fromStatus is null for initial creation
+                Task.Status.CREATED,
+                null   // userId - can be enhanced later with security context
+        );
+
         return toTaskDto(savedTask);
     }
 
@@ -188,6 +200,15 @@ public class TaskService {
         task.setList(parentTask.getList());
 
         Task savedTask = taskRepository.save(task);
+
+        // Record initial CREATED event
+        taskStatusEventService.recordStatusChange(
+                savedTask.getId(),
+                null,  // fromStatus is null for initial creation
+                Task.Status.CREATED,
+                null   // userId - can be enhanced later with security context
+        );
+
         return toTaskDto(savedTask);
     }
 
@@ -217,8 +238,16 @@ public class TaskService {
         if (taskDetails.getCompletedDate() != null) {
             task.setCompletedDate(taskDetails.getCompletedDate());
         }
-        if (taskDetails.getStatus() != null) {
+        if (taskDetails.getStatus() != null && !taskDetails.getStatus().equals(previousStatus)) {
             task.setStatus(taskDetails.getStatus());
+
+            // Record status change event
+            taskStatusEventService.recordStatusChange(
+                    task.getId(),
+                    previousStatus,
+                    taskDetails.getStatus(),
+                    null  // userId - can be enhanced later with security context
+            );
 
             // Automatically set completedDate when task is marked as COMPLETED
             if (taskDetails.getStatus() == Task.Status.COMPLETED && previousStatus != Task.Status.COMPLETED) {

@@ -456,6 +456,17 @@ function Projects() {
             <span className="material-icon">folder_open</span>
             {!isSidebarCollapsed && <span className="nav-label">Projects</span>}
           </button>
+          <button
+            className={`nav-item ${selectedView === 'analytics' ? 'active' : ''}`}
+            onClick={() => {
+              navigate('/analytics', { state: { user } });
+              setSelectedView('analytics');
+            }}
+            title="Analytics"
+          >
+            <span className="material-icon filled">analytics</span>
+            {!isSidebarCollapsed && <span className="nav-label">Analytics</span>}
+          </button>
         </nav>
 
         <div className="sidebar-footer">

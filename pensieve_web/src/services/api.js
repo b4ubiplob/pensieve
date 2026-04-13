@@ -169,5 +169,22 @@ export const taskAPI = {
   },
 };
 
+// Analytics API
+export const analyticsAPI = {
+  getTaskDuration: async (taskId) => {
+    return apiRequest(`/analytics/task/${taskId}/duration`);
+  },
+
+  getTasksByDate: async (date, userId = null) => {
+    const userParam = userId ? `&userId=${userId}` : '';
+    return apiRequest(`/analytics/tasks/by-date?date=${date}${userParam}`);
+  },
+
+  getTasksByDateRange: async (startDate, endDate, userId = null) => {
+    const userParam = userId ? `&userId=${userId}` : '';
+    return apiRequest(`/analytics/tasks/by-range?startDate=${startDate}&endDate=${endDate}${userParam}`);
+  },
+};
+
 // Export API_BASE_URL for configuration purposes
 export { API_BASE_URL };

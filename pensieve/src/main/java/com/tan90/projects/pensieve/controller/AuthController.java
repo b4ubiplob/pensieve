@@ -8,6 +8,7 @@ import com.tan90.projects.pensieve.entity.User;
 import com.tan90.projects.pensieve.repository.UserRepository;
 import com.tan90.projects.pensieve.service.JwtService;
 import com.tan90.projects.pensieve.service.UserService;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -23,7 +24,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/auth")
-@CrossOrigin(origins = "http://localhost:5173")
+@CrossOrigin(origins = "${frontend.url}")
 public class AuthController {
 
     private final AuthenticationManager authenticationManager;

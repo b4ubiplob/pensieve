@@ -6,6 +6,7 @@ import Projects from './components/Projects'
 import Tasks from './components/Tasks'
 import Task from './components/Task'
 import TaskDetail from './components/TaskDetail'
+import Analytics from './components/Analytics'
 import OAuth2Redirect from './components/OAuth2Redirect'
 import ProtectedRoute from './components/ProtectedRoute'
 import { initializeSession } from './services/auth'
@@ -55,6 +56,11 @@ function App() {
         <Route path="/task-detail" element={
           <ProtectedRoute>
             <TaskDetail />
+          </ProtectedRoute>
+        } />
+        <Route path="/analytics" element={
+          <ProtectedRoute>
+            <Analytics />
           </ProtectedRoute>
         } />
       </Routes>

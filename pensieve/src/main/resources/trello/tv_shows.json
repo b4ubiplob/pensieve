@@ -36439,7 +36439,8 @@
 		"pluginData": [],
 		"customFieldItems": []
 	}],
-	"checklists": [{
+	"checklists": [
+		{
 		"id": "65fec0f80898a7aca6b802e3",
 		"name": "seasons",
 		"idBoard": "5ef82e45d3573136f0434ea3",
@@ -39283,7 +39284,8 @@
 		"creationMethod": null
 	}],
 	"customFields": [],
-	"labels": [{
+	"labels": [
+		{
 		"id": "5ef82e45f1bb5752f692e852",
 		"idBoard": "5ef82e45d3573136f0434ea3",
 		"name": "",
@@ -39320,7 +39322,8 @@
 		"color": "yellow",
 		"uses": 0
 	}],
-	"lists": [{
+	"lists": [
+	{
 		"id": "5ef82e5dd266c0281c537ac4",
 		"name": "Not started",
 		"closed": false,
@@ -39350,7 +39353,8 @@
 			}
 		},
 		"nodeId": "ari:cloud:trello::list/workspace/5fc5e40c3af50b2712b5e0e8/5ef82e5dd266c0281c537ac4"
-	}, {
+	}, 
+	{
 		"id": "5ef82fd16aff7f71e64f0233",
 		"name": "In progress",
 		"closed": false,
@@ -39380,7 +39384,8 @@
 			}
 		},
 		"nodeId": "ari:cloud:trello::list/workspace/5fc5e40c3af50b2712b5e0e8/5ef82fd16aff7f71e64f0233"
-	}, {
+	}, 
+	{
 		"id": "65febecf29080ff6eba442e3",
 		"name": "Done",
 		"closed": false,
@@ -39410,7 +39415,8 @@
 			}
 		},
 		"nodeId": "ari:cloud:trello::list/workspace/5fc5e40c3af50b2712b5e0e8/65febecf29080ff6eba442e3"
-	}, {
+	}, 
+	{
 		"id": "666fff0a322b58f0e7c3b3a6",
 		"name": "Paused",
 		"closed": false,
