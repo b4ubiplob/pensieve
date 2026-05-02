@@ -232,10 +232,9 @@ function Projects() {
   };
 
   const handleTaskClick = (task) => {
-    const project = projects.find(p => p.id === task.projectId);
-    if (project) {
-      navigate('/tasks', { state: { project, user } });
-    }
+    const project = { id: task.projectId, name: task.projectName };
+    const list = { id: task.listId, name: task.listName };
+    navigate('/task-detail', { state: { task, project, list, user } });
   };
 
   const handleSetToCompleted = async (task) => {

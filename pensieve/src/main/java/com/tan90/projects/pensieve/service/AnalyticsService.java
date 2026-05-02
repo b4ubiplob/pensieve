@@ -79,6 +79,7 @@ public class AnalyticsService {
         return taskIds.stream()
                 .map(taskId -> taskRepository.findById(taskId).orElse(null))
                 .filter(task -> task != null)
+                .filter(task -> task.getParent() == null)
                 .filter(task -> userId == null || (task.getList() != null &&
                         task.getList().getProject() != null &&
                         userId.equals(task.getList().getProject().getUser().getId())))
@@ -103,6 +104,7 @@ public class AnalyticsService {
         return taskIds.stream()
                 .map(taskId -> taskRepository.findById(taskId).orElse(null))
                 .filter(task -> task != null)
+                .filter(task -> task.getParent() == null)
                 .filter(task -> userId == null || (task.getList() != null &&
                         task.getList().getProject() != null &&
                         userId.equals(task.getList().getProject().getUser().getId())))
@@ -123,8 +125,10 @@ public class AnalyticsService {
         dto.setCreatedDate(task.getCreatedDate());
 
         if (task.getList() != null) {
+            dto.setListId(task.getList().getId());
             dto.setListName(task.getList().getName());
             if (task.getList().getProject() != null) {
+                dto.setProjectId(task.getList().getProject().getId());
                 dto.setProjectName(task.getList().getProject().getName());
             }
         }

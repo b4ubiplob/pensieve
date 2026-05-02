@@ -13,7 +13,9 @@ public class TaskSummaryDto {
     private LocalDateTime createdDate;
     private LocalDateTime lastEventDate;
     private String projectName;
+    private String projectId;
     private String listName;
+    private String listId;
 
     // Constructors
     public TaskSummaryDto() {
@@ -99,11 +101,27 @@ public class TaskSummaryDto {
         this.projectName = projectName;
     }
 
+    public String getProjectId() {
+        return projectId;
+    }
+
+    public void setProjectId(String projectId) {
+        this.projectId = projectId;
+    }
+
     public String getListName() {
         return listName;
     }
 
     public void setListName(String listName) {
         this.listName = listName;
+    }
+
+    public String getListId() {
+        return listId;
+    }
+
+    public void setListId(String listId) {
+        this.listId = listId;
     }
 }

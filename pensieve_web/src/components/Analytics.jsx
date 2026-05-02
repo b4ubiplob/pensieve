@@ -53,11 +53,13 @@ function Analytics() {
   // Date search state
   const [selectedDate, setSelectedDate] = useState('');
   const [dateResults, setDateResults] = useState([]);
+  const [dateCollapsed, setDateCollapsed] = useState({});
 
   // Range search state
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [rangeResults, setRangeResults] = useState([]);
+  const [rangeCollapsed, setRangeCollapsed] = useState({});
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -109,7 +111,7 @@ function Analytics() {
       const response = await taskAPI.getTasks(listId);
       if (response.ok) {
         const data = await response.json();
-        setTasks(data);
+        setTasks(data.filter(task => !task.parentTaskId && task.status === 'COMPLETED'));
         setSelectedTask('');
       }
     } catch (err) {
@@ -185,6 +187,8 @@ function Analytics() {
       if (response.ok) {
         const data = await response.json();
         setDateResults(data);
+        const projects = [...new Set(data.map(t => t.projectName))];
+        setDateCollapsed(Object.fromEntries(projects.map((p, i) => [p, i !== 0])));
       } else {
         setError('Failed to fetch tasks');
       }
@@ -212,6 +216,8 @@ function Analytics() {
       if (response.ok) {
         const data = await response.json();
         setRangeResults(data);
+        const projects = [...new Set(data.map(t => t.projectName))];
+        setRangeCollapsed(Object.fromEntries(projects.map((p, i) => [p, i !== 0])));
       } else {
         setError('Failed to fetch tasks');
       }
@@ -230,6 +236,20 @@ function Analytics() {
   const handleLogout = async () => {
     await logout();
     navigate('/login');
+  };
+
+  const navigateToTask = async (taskSummary) => {
+    try {
+      const response = await taskAPI.getTaskById(taskSummary.taskId);
+      if (response.ok) {
+        const task = await response.json();
+        const project = { id: taskSummary.projectId, name: taskSummary.projectName };
+        const list = { id: taskSummary.listId, name: taskSummary.listName };
+        navigate('/task-detail', { state: { task, project, list, user } });
+      }
+    } catch (err) {
+      console.error('Failed to navigate to task:', err);
+    }
   };
 
   const formatTimestamp = (timestamp) => {
@@ -449,10 +469,42 @@ function Analytics() {
               {dateResults.length > 0 && (
                 <div className="tasks-list">
                   <h4>{dateResults.length} task(s) found</h4>
-                  {dateResults.map(task => (
-                    <div key={task.taskId} className="task-card">
-                      <h5>{task.title}</h5>
-                      <p className={`status ${task.status}`}>{task.status}</p>
+                  {[...new Set(dateResults.map(t => t.projectName))].map(project => (
+                    <div key={project} className="project-group">
+                      <button
+                        className="project-group-header"
+                        onClick={() => setDateCollapsed(prev => ({ ...prev, [project]: !prev[project] }))}
+                      >
+                        <span className="material-icon">{dateCollapsed[project] ? 'chevron_right' : 'expand_more'}</span>
+                        <span className="project-group-name">{project}</span>
+                        <span className="project-group-count">{dateResults.filter(t => t.projectName === project).length}</span>
+                      </button>
+                      {!dateCollapsed[project] && (
+                        <div className="project-group-tasks">
+                          {[...new Set(dateResults.filter(t => t.projectName === project).map(t => t.listName))].map(list => (
+                            <div key={list} className="list-group">
+                              <button
+                                className="list-group-header"
+                                onClick={() => setDateCollapsed(prev => ({ ...prev, [`${project}|${list}`]: !prev[`${project}|${list}`] }))}
+                              >
+                                <span className="material-icon">{dateCollapsed[`${project}|${list}`] ? 'chevron_right' : 'expand_more'}</span>
+                                <span className="list-group-name">{list}</span>
+                                <span className="project-group-count">{dateResults.filter(t => t.projectName === project && t.listName === list).length}</span>
+                              </button>
+                              {!dateCollapsed[`${project}|${list}`] && (
+                                <div className="list-group-tasks">
+                                  {dateResults.filter(t => t.projectName === project && t.listName === list).map(task => (
+                                    <div key={task.taskId} className="task-card task-card-clickable" onClick={() => navigateToTask(task)}>
+                                      <h5>{task.title}</h5>
+                                      <p className={`status ${task.status}`}>{task.status}</p>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -493,10 +545,42 @@ function Analytics() {
               {rangeResults.length > 0 && (
                 <div className="tasks-list">
                   <h4>{rangeResults.length} task(s) found</h4>
-                  {rangeResults.map(task => (
-                    <div key={task.taskId} className="task-card">
-                      <h5>{task.title}</h5>
-                      <p className={`status ${task.status}`}>{task.status}</p>
+                  {[...new Set(rangeResults.map(t => t.projectName))].map(project => (
+                    <div key={project} className="project-group">
+                      <button
+                        className="project-group-header"
+                        onClick={() => setRangeCollapsed(prev => ({ ...prev, [project]: !prev[project] }))}
+                      >
+                        <span className="material-icon">{rangeCollapsed[project] ? 'chevron_right' : 'expand_more'}</span>
+                        <span className="project-group-name">{project}</span>
+                        <span className="project-group-count">{rangeResults.filter(t => t.projectName === project).length}</span>
+                      </button>
+                      {!rangeCollapsed[project] && (
+                        <div className="project-group-tasks">
+                          {[...new Set(rangeResults.filter(t => t.projectName === project).map(t => t.listName))].map(list => (
+                            <div key={list} className="list-group">
+                              <button
+                                className="list-group-header"
+                                onClick={() => setRangeCollapsed(prev => ({ ...prev, [`${project}|${list}`]: !prev[`${project}|${list}`] }))}
+                              >
+                                <span className="material-icon">{rangeCollapsed[`${project}|${list}`] ? 'chevron_right' : 'expand_more'}</span>
+                                <span className="list-group-name">{list}</span>
+                                <span className="project-group-count">{rangeResults.filter(t => t.projectName === project && t.listName === list).length}</span>
+                              </button>
+                              {!rangeCollapsed[`${project}|${list}`] && (
+                                <div className="list-group-tasks">
+                                  {rangeResults.filter(t => t.projectName === project && t.listName === list).map(task => (
+                                    <div key={task.taskId} className="task-card task-card-clickable" onClick={() => navigateToTask(task)}>
+                                      <h5>{task.title}</h5>
+                                      <p className={`status ${task.status}`}>{task.status}</p>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>

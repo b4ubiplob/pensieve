@@ -364,6 +364,17 @@
   border-left: 3px solid var(--primary);
 }
 
+.task-card-clickable {
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.task-card-clickable:hover {
+  border-color: var(--primary);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+
 .task-card h5 {
   margin-bottom: 0.5rem;
   color: var(--on-surface);
@@ -401,6 +412,102 @@
 .task-card .status.PAUSED {
   background: #ffc107;
   color: #000;
+}
+
+.project-group {
+  margin-bottom: 0.75rem;
+  border: 1px solid var(--outline-variant);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.project-group-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.875rem 1rem;
+  background: var(--surface-container);
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s;
+}
+
+.project-group-header:hover {
+  background: var(--surface-variant);
+}
+
+.project-group-name {
+  flex: 1;
+  font-weight: 600;
+  font-size: 0.9375rem;
+  color: var(--on-surface);
+}
+
+.project-group-count {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--on-surface-variant);
+  background: var(--surface-variant);
+  padding: 0.125rem 0.5rem;
+  border-radius: 10px;
+}
+
+.project-group-tasks {
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  background: var(--surface);
+}
+
+.project-group-tasks .task-card {
+  margin-bottom: 0;
+}
+
+.list-group {
+  border-top: 1px solid var(--outline-variant);
+}
+
+.list-group:first-child {
+  border-top: none;
+}
+
+.list-group-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 0.75rem;
+  background: var(--surface);
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s;
+}
+
+.list-group-header:hover {
+  background: var(--surface-variant);
+}
+
+.list-group-name {
+  flex: 1;
+  font-weight: 500;
+  font-size: 0.875rem;
+  color: var(--on-surface-variant);
+}
+
+.list-group-tasks {
+  padding: 0.5rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  background: var(--surface);
+}
+
+.list-group-tasks .task-card {
+  margin-bottom: 0;
 }
 
 .error-message {
