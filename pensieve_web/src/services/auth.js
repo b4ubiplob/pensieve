@@ -1,6 +1,6 @@
 // Authentication service for managing JWT tokens and auth operations
 
-const API_BASE_URL = 'http://localhost:8080/api/v1';
+const API_BASE_URL = 'http://localhost:8083/api/v1';
 
 // In-memory storage for access token (prevents XSS attacks)
 let accessToken = null;

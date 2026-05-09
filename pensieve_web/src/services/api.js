@@ -1,5 +1,5 @@
 // API Configuration
-const API_BASE_URL = 'http://localhost:8080/api/v1';
+const API_BASE_URL = 'http://localhost:8083/api/v1';
 
 // Import auth functions
 import { getAccessToken, refreshAccessToken, clearTokens } from './auth.js';

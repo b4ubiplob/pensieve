@@ -1,5 +1,9 @@
 package com.tan90.projects.pensieve.controller;
 
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
+import com.google.api.client.http.javanet.NetHttpTransport;
+import com.google.api.client.json.gson.GsonFactory;
 import com.tan90.projects.pensieve.config.JwtConfig;
 import com.tan90.projects.pensieve.dto.AuthResponse;
 import com.tan90.projects.pensieve.dto.LoginRequest;
@@ -19,8 +23,10 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/auth")
@@ -33,6 +39,9 @@ public class AuthController {
     private final UserRepository userRepository;
     private final UserService userService;
     private final PasswordEncoder passwordEncoder;
+
+    @Value("${spring.security.oauth2.client.registration.google.client-id}")
+    private String googleClientId;
 
     public AuthController(
             AuthenticationManager authenticationManager,
@@ -205,6 +214,101 @@ public class AuthController {
             return sb.toString().equals(md5Hash);
         } catch (Exception e) {
             return false;
+        }
+    }
+
+    /**
+     * POST /auth/google-token - Exchange a Google ID token for Pensieve JWT tokens.
+     * Used by CLI/MCP clients that perform their own Google OAuth flow.
+     */
+    @PostMapping("/google-token")
+    public ResponseEntity<?> loginWithGoogleToken(@RequestBody Map<String, String> request) {
+        String idTokenString = request.get("idToken");
+
+        if (idTokenString == null || idTokenString.isBlank()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", "idToken is required"));
+        }
+
+        try {
+            // Verify the Google ID token
+            GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(
+                    new NetHttpTransport(), GsonFactory.getDefaultInstance())
+                    .setAudience(Collections.singletonList(googleClientId))
+                    .build();
+
+            GoogleIdToken idToken = verifier.verify(idTokenString);
+            if (idToken == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of("error", "Invalid Google ID token"));
+            }
+
+            GoogleIdToken.Payload payload = idToken.getPayload();
+            String email = payload.getEmail();
+            String name = (String) payload.get("name");
+            String pictureUrl = (String) payload.get("picture");
+            String googleUserId = payload.getSubject();
+
+            if (email == null) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("error", "Google token does not contain email"));
+            }
+
+            // Find or create user (same logic as CustomOAuth2UserService)
+            User user = userRepository.findByEmail(email).orElse(null);
+
+            if (user == null) {
+                // Create new user
+                user = new User();
+                user.setId(UUID.randomUUID().toString());
+                user.setEmail(email);
+                user.setName(name != null ? name : email);
+                user.setProvider("GOOGLE");
+                user.setProviderId(googleUserId);
+                user.setPictureUrl(pictureUrl);
+                user = userRepository.save(user);
+            } else {
+                // Link account if it was local
+                if (user.getProvider() == null || user.getProvider().equals("LOCAL")) {
+                    user.setProvider("GOOGLE");
+                    user.setProviderId(googleUserId);
+                    user.setPictureUrl(pictureUrl);
+                    user = userRepository.save(user);
+                }
+            }
+
+            // Generate JWT tokens
+            UserDetails userDetails = org.springframework.security.core.userdetails.User.builder()
+                    .username(user.getEmail())
+                    .password(user.getPassword() != null ? user.getPassword() : "")
+                    .authorities("ROLE_USER")
+                    .build();
+
+            String accessToken = jwtService.generateAccessToken(userDetails);
+            String refreshToken = jwtService.generateRefreshToken(userDetails);
+
+            UserDto userDto = new UserDto(
+                    user.getId(),
+                    user.getEmail(),
+                    user.getUsername(),
+                    user.getName(),
+                    user.getPicture(),
+                    user.getProvider(),
+                    user.getPictureUrl()
+            );
+
+            AuthResponse response = new AuthResponse(
+                    accessToken,
+                    refreshToken,
+                    jwtConfig.getAccessTokenExpiration() / 1000,
+                    userDto
+            );
+
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Failed to verify Google token: " + e.getMessage()));
         }
     }
 }

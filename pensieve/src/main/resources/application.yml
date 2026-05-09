@@ -45,9 +45,22 @@ jwt:
 
 # Server configuration
 server:
-  port: 8080
+  port: 8083
 
 # Frontend configuration
 frontend:
   url: ${FRONTEND_URL:http://localhost:5173}
+
+# Backup configuration
+backup:
+  enabled: true
+  drive:
+    folder-name: pensieve_backup
+  db:
+    host: ${DB_HOST:localhost}
+    port: ${DB_PORT:5432}
+    name: ${DB_NAME:db_pensieve}
+    user: ${DB_USER:postgres}
+    password: ${DB_PASSWORD:Password123}
+  pg-dump-path: ${PGDUMP_PATH:pg_dump}
 

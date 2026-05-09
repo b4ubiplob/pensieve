@@ -1,2 +1,6 @@
 pensieve/target/
 pensieve_web/node_modules/
+pensieve_web/dist/
+pensieve-mcp/node_modules/
+pensieve-mcp/dist/
+pensieve/.idea/
